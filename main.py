@@ -113,7 +113,7 @@ elif page == "2. Checklist ανά Έργο":
         st.subheader(f"📋 Έλεγχος Φακέλου: {selected_name}")
         
         # Επικεφαλίδες Πίνακα
-        h1, h2, h3 = st.columns([1.2, 0.8, 3.0], gap="extra_small")
+        h1, h2, h3 = st.columns([1.2, 0.8, 3.0], gap="small")
         h1.caption("📄 Έγγραφο")
         h2.caption("📊 Κατάσταση")
         h3.caption("📝 Παρατήρηση")
@@ -133,7 +133,7 @@ elif page == "2. Checklist ανά Έργο":
                 current_note = ""
 
             # Διάταξη με extra_small gap και ελάχιστο padding
-            c1, c2, c3 = st.columns([1.2, 0.8, 3.0], gap="extra_small")
+            c1, c2, c3 = st.columns([1.2, 0.8, 3.0], gap="small")
             c1.markdown(f"<div style='padding-top:2px; font-size:0.85rem; line-height:1.2;'><b>{doc}</b></div>", unsafe_allow_html=True)
             
             status = c2.selectbox("", options, index=options.index(current_val) if current_val in options else 0, key=f"st_{selected_afm}_{doc}", label_visibility="collapsed")
