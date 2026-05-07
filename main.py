@@ -158,33 +158,71 @@ elif page == "2. Checklist ανά Έργο":
             st.success(f"✅ Αποθηκεύτηκε!")
             st.rerun()
 
-# --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
-elif page == "3. Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Διαχείριση Υπαλλήλων & Παραδοτέων")
+# --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ---
+elif page == "3. Μισθοδοσία":
+    st.header("👤 Διαχείριση & Έλεγχος Υπαλλήλων")
+    
     projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
-
+    
     if projects_df.empty:
-        st.error("⚠️ Παρακαλώ καταχωρήστε πρώτα μια επιχείρηση στο Στάδιο 1.")
+        st.warning("⚠️ Παρακαλώ καταχωρήστε πρώτα μια επιχείρηση στο Στάδιο 1.")
     else:
-        selected_p = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'].unique())
-        target_month = st.selectbox("Μήνας Ελέγχου:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
+        # 1. Επιλογή Επιχείρησης & Μήνα
+        col_sel1, col_sel2 = st.columns(2)
+        with col_sel1:
+            selected_project = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'], key="p_select")
+            selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_project]['ΑΦΜ'].iloc[0])
+        with col_sel2:
+            selected_month = st.selectbox("Μήνας Ελέγχου:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
 
         st.divider()
-        tab1, tab2 = st.tabs(["📋 Μόνιμα Έγγραφα", "💰 Μηνιαία Παραδοτέα"])
 
-        with tab1:
-            st.subheader("Γενικά Έγγραφα Εργαζομένου")
-            col_a, col_b = st.columns(2)
-            with col_a: st.file_uploader("Αναγγελία Πρόσληψης (Ε3)", type=['pdf', 'jpg', 'png'], key="e3_up")
-            with col_b: st.file_uploader("Ταυτότητα (ΑΔΤ)", type=['pdf', 'jpg', 'png'], key="id_up")
+        # 2. ΠΕΔΙΟ ΣΥΜΠΛΗΡΩΣΗΣ ΣΤΟΙΧΕΙΩΝ (Καταχώρηση)
+        st.subheader(f"➕ Προσθήκη Υπαλλήλου στην επιχείρηση {selected_project}")
+        with st.container():
+            c1, c2, c3 = st.columns([2, 1, 1])
+            new_emp_name = c1.text_input("Ονοματεπώνυμο Υπαλλήλου", placeholder="π.χ. ΠΑΠΑΔΟΠΟΥΛΟΣ ΙΩΑΝΝΗΣ")
+            new_emp_id = c2.text_input("ΑΦΜ Υπαλλήλου (Προαιρετικό)")
+            
+            if c3.button("📥 Καταχώρηση Υπαλλήλου", use_container_width=True):
+                if new_emp_name:
+                    emp_df = load_data('data_employees.csv', ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου"])
+                    # Έλεγχος αν υπάρχει ήδη ο υπάλληλος στην ίδια επιχείρηση
+                    exists = emp_df[(emp_df['ΑΦΜ_Εργου'].astype(str) == selected_afm) & 
+                                    (emp_df['Ονοματεπώνυμο'] == new_emp_name)]
+                    
+                    if exists.empty:
+                        new_row = pd.DataFrame([{"ΑΦΜ_Εργου": selected_afm, "Ονοματεπώνυμο": new_emp_name, "ΑΦΜ_Υπαλλήλου": new_emp_id}])
+                        emp_df = pd.concat([emp_df, new_row], ignore_index=True)
+                        save_to_csv(emp_df, 'data_employees.csv')
+                        st.success(f"Ο υπάλληλος {new_emp_name} αποθηκεύτηκε!")
+                        st.rerun()
+                    else:
+                        st.warning("Ο υπάλληλος υπάρχει ήδη σε αυτή την επιχείρηση.")
+                else:
+                    st.error("Συμπληρώστε το όνομα του υπαλλήλου.")
 
-        with tab2:
-            st.subheader(f"Παραδοτέα Μηνός: {target_month}")
-            monthly_docs = ["Extrait Τραπέζης", "Παραστατικό Πληρωμής", "Λογιστικό Άρθρο Καταχώρησης", "Λογιστικό Άρθρο Πληρωμής", "Βιβλίο Εσόδων-Εξόδων"]
-            options_status = ["Προς Έλεγχο", "Έχει Ανέβει", "Λανθασμένο Αρχείο", "Ολοκληρώθηκε"]
+        st.divider()
 
-            for m_doc in monthly_docs:
-                mc1, mc2, mc3 = st.columns([2, 1, 1.2])
-                mc1.markdown(f"<div style='padding-top:10px;'>📄 {m_doc}</div>", unsafe_allow_html=True)
-                mc2.file_uploader("Upload", type=['pdf', 'jpg', 'png'], key=f"up_{m_doc}_{target_month}", label_visibility="collapsed")
-                mc3.selectbox("", options_status, key=f"st_{m_doc}_{target_month}", label_visibility="collapsed")
+        # 3. DROPDOWN MENU ΕΠΙΛΟΓΗΣ (Από τους αποθηκευμένους)
+        st.subheader("🔍 Επιλογή Υπαλλήλου για Έλεγχο")
+        all_emps_df = load_data('data_employees.csv', ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου"])
+        # Φιλτράρισμα υπαλλήλων μόνο για την επιλεγμένη επιχείρηση
+        current_project_emps = all_emps_df[all_emps_df['ΑΦΜ_Εργου'].astype(str) == selected_afm]['Ονοματεπώνυμο'].tolist()
+
+        if not current_project_emps:
+            st.info("Δεν υπάρχουν αποθηκευμένοι υπάλληλοι για αυτή την επιχείρηση. Καταχωρήστε έναν παραπάνω.")
+        else:
+            selected_emp = st.selectbox("Επιλέξτε Υπάλληλο από τη λίστα:", ["--- Επιλέξτε ---"] + current_project_emps)
+
+            if selected_emp != "--- Επιλέξτε ---":
+                st.info(f"📍 Έλεγχος Παραδοτέων: **{selected_emp}** | Μήνας: **{selected_month}**")
+                
+                # Εδώ θα έρθουν τα πεδία των παραδοτέων που θα ορίσουμε στη συνέχεια
+                st.write("*(Εδώ θα προστεθούν τα checkbox/upload για τα έγγραφα του υπαλλήλου)*")
+                
+                if st.button("🗑️ Διαγραφή Υπαλλήλου από το αρχείο"):
+                    all_emps_df = all_emps_df[~((all_emps_df['ΑΦΜ_Εργου'].astype(str) == selected_afm) & 
+                                               (all_emps_df['Ονοματεπώνυμο'] == selected_emp))]
+                    save_to_csv(all_emps_df, 'data_employees.csv')
+                    st.rerun()
