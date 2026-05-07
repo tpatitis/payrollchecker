@@ -29,38 +29,41 @@ page = st.sidebar.radio(
 
 # --- ΣΤΑΔΙΟ 1: ΣΤΟΙΧΕΙΑ ΕΡΓΟΥ ---
 if page == "1. Στοιχεία Έργου & Επιχείρησης":
-    st.header("🏢 Γενικά Στοιχεία Έργου & Επιχείρησης")
+    st.header("🏢 Διαχείριση Έργων")
     
-    with st.form("main_project_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            company = st.text_input("Επωνυμία Επιχείρησης")
-            afm = st.text_input("ΑΦΜ (9 ψηφία)", max_chars=9)
-        with col2:
-            mis = st.text_input("Κωδικός Έργου")
-            budget = st.number_input("Συνολικός Προϋπολογισμός (€)", min_value=0.0, step=100.0)
-        
-        submitted = st.form_submit_button("💾 Αποθήκευση Στοιχείων")
-        if submitted:
-            if company and afm and mis:
-                project_info = {"Επωνυμία": company, "ΑΦΜ": afm, "MIS": mis, "Προϋπολογισμός": budget}
-                save_data(project_info, 'data_projects.csv')
-                st.success(f"Το έργο '{company}' αποθηκεύτηκε με επιτυχία!")
-            else:
-                st.warning("Παρακαλώ συμπληρώστε τα υποχρεωτικά πεδία (Επωνυμία, ΑΦΜ, MIS).")
+    # Φόρμα Καταχώρησης
+    with st.expander("➕ Προσθήκη Νέου Έργου"):
+        with st.form("main_project_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                company = st.text_input("Επωνυμία Επιχείρησης")
+                afm = st.text_input("ΑΦΜ", max_chars=9)
+            with col2:
+                mis = st.text_input("Κωδικός Έργου")
+                budget = st.number_input("Προϋπολογισμός (€)", min_value=0.0)
+            
+            if st.form_submit_button("💾 Αποθήκευση"):
+                if company and afm:
+                    project_info = {"Επωνυμία": company, "ΑΦΜ": afm, "MIS": mis, "Προϋπολογισμός": budget}
+                    save_data(project_info, 'data_projects.csv')
+                    st.rerun()
 
-    # Προβολή Ιστορικού (Διορθωμένο για EmptyDataError)
+    # Προβολή και Διαχείριση
     if os.path.isfile('data_projects.csv'):
-        st.divider()
-        st.subheader("📋 Καταχωρημένα Έργα")
-        try:
-            history_df = pd.read_csv('data_projects.csv')
-            if not history_df.empty:
-                st.dataframe(history_df, use_container_width=True)
-            else:
-                st.info("Το αρχείο είναι έτοιμο, αλλά δεν υπάρχουν ακόμα καταχωρήσεις.")
-        except pd.errors.EmptyDataError:
-            st.info("Δεν υπάρχουν ακόμα καταχωρημένα έργα. Συμπληρώστε τη φόρμα παραπάνω.")
+        df = pd.read_csv('data_projects.csv')
+        st.subheader("📋 Λίστα Καταχωρημένων Έργων")
+        
+        for index, row in df.iterrows():
+            with st.container():
+                c1, c2, c3, c4 = st.columns([3, 2, 1, 1])
+                c1.write(f"**{row['Επωνυμία']}** (ΑΦΜ: {row['ΑΦΜ']})")
+                c2.write(f"MIS: {row['MIS']}")
+                
+                if c4.button("🗑️", key=f"del_{index}"):
+                    df = df.drop(index)
+                    df.to_csv('data_projects.csv', index=False, encoding='utf-8-sig')
+                    st.rerun()
+                st.divider()
 
 # --- ΣΤΑΔΙΟ 2: ΓΕΝΙΚΑ ΠΑΡΑΔΟΤΕΑ ---
 elif page == "2. Γενικά Παραδοτέα (Checklist)":
