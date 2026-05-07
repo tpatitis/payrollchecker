@@ -49,11 +49,18 @@ if page == "1. Στοιχεία Έργου & Επιχείρησης":
             else:
                 st.warning("Παρακαλώ συμπληρώστε τα υποχρεωτικά πεδία (Επωνυμία, ΑΦΜ, MIS).")
 
+    # Προβολή Ιστορικού (Διορθωμένο για EmptyDataError)
     if os.path.isfile('data_projects.csv'):
         st.divider()
         st.subheader("📋 Καταχωρημένα Έργα")
-        history_df = pd.read_csv('data_projects.csv')
-        st.dataframe(history_df, use_container_width=True)
+        try:
+            history_df = pd.read_csv('data_projects.csv')
+            if not history_df.empty:
+                st.dataframe(history_df, use_container_width=True)
+            else:
+                st.info("Το αρχείο είναι έτοιμο, αλλά δεν υπάρχουν ακόμα καταχωρήσεις.")
+        except pd.errors.EmptyDataError:
+            st.info("Δεν υπάρχουν ακόμα καταχωρημένα έργα. Συμπληρώστε τη φόρμα παραπάνω.")
 
 # --- ΣΤΑΔΙΟ 2: ΓΕΝΙΚΑ ΠΑΡΑΔΟΤΕΑ ---
 elif page == "2. Γενικά Παραδοτέα (Checklist)":
