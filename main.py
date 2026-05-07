@@ -93,42 +93,53 @@ elif page == "2. Γενικά Παραδοτέα (Checklist)":
 
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Διαχείριση Υπαλλήλων")
+    st.header("👤 Διαχείριση Υπαλλήλων & Παραδοτέων")
 
     if not os.path.isfile('data_projects.csv'):
-        st.error("⚠️ Πρέπει πρώτα να καταχωρήσετε ένα έργο στο Στάδιο 1.")
+        st.error("⚠️ Παρακαλώ καταχωρήστε πρώτα ένα έργο στο Στάδιο 1.")
     else:
         projects_df = pd.read_csv('data_projects.csv')
-        project_list = projects_df['Επωνυμία'].tolist()
-        selected_p = st.selectbox("Επιλέξτε Επιχείρηση/Έργο:", project_list)
+        selected_p = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'].unique())
 
-        # Φόρμα Προσθήκης Υπαλλήλου
-        with st.expander("➕ Προσθήκη Νέου Υπαλλήλου"):
-            with st.form("add_emp"):
-                e_col1, e_col2 = st.columns(2)
-                with e_col1:
-                    name = st.text_input("Ονοματεπώνυμο")
-                    amka = st.text_input("ΑΜΚΑ", max_chars=11)
-                with e_col2:
-                    pos = st.text_input("Θέση/Ειδικότητα")
-                    sal = st.number_input("Μηνιαίος Μισθός (€)", min_value=0.0)
-                
-                if st.form_submit_button("Αποθήκευση Υπαλλήλου"):
-                    if name and amka:
-                        emp_info = {"Έργο": selected_p, "Όνομα": name, "ΑΜΚΑ": amka, "Ειδικότητα": pos, "Μισθός": sal}
-                        save_data(emp_info, 'data_employees.csv')
-                        st.success(f"Ο υπάλληλος {name} προστέθηκε!")
-                    else:
-                        st.error("Το όνομα και το ΑΜΚΑ είναι υποχρεωτικά.")
+        # Επιλογή Μήνα Ελέγχου
+        target_month = st.selectbox("Μήνας Ελέγχου:", 
+            ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", 
+             "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
 
-        # Προβολή Υπαλλήλων
-        if os.path.isfile('data_employees.csv'):
-            st.divider()
-            st.subheader(f"👥 Προσωπικό Έργου: {selected_p}")
-            all_emps = pd.read_csv('data_employees.csv')
-            filtered_emps = all_emps[all_emps['Έργο'] == selected_p]
+        st.divider()
+
+        # 1. Μόνιμα Έγγραφα Υπαλλήλου (Tabs για οργάνωση)
+        tab1, tab2 = st.tabs(["📋 Μόνιμα Έγγραφα", "💰 Μηνιαία Παραδοτέα"])
+
+        with tab1:
+            st.subheader("Γενικά Έγγραφα Εργαζομένου")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.file_uploader("Αναγγελία Πρόσληψης (Ε3)", type=['pdf', 'jpg', 'png'])
+            with col_b:
+                st.file_uploader("Ταυτότητα", type=['pdf', 'jpg', 'png'])
+
+        with tab2:
+            st.subheader(f"Παραδοτέα Μηνός: {target_month}")
             
-            if not filtered_emps.empty:
-                st.dataframe(filtered_emps[['Όνομα', 'ΑΜΚΑ', 'Ειδικότητα', 'Μισθός']], use_container_width=True)
-            else:
-                st.write("Δεν έχουν καταχωρηθεί υπάλληλοι για αυτό το έργο.")
+            # Λίστα με τα μηνιαία που ορίσαμε
+            monthly_docs = [
+                "Extrait Τραπέζης (Κίνηση Λογαριασμού)",
+                "Παραστατικό Πληρωμής (Screenshot/Pay-slip)",
+                "Λογιστικό Άρθρο Καταχώρησης (Διπλογραφικά)",
+                "Λογιστικό Άρθρο Πληρωμής (Διπλογραφικά)",
+                "Βιβλίο Εσόδων-Εξόδων (Απλογραφικά)"
+            ]
+
+            for doc in monthly_docs:
+                c1, c2, c3 = st.columns([2, 1, 1])
+                with c1:
+                    st.write(f"📄 {doc}")
+                with c2:
+                    st.file_uploader("Upload", type=['pdf', 'jpg', 'png'], key=f"{doc}_{target_month}", label_visibility="collapsed")
+                with c3:
+                    st.selectbox("Status", ["❌", "✅", "⚠️"], key=f"stat_{doc}_{target_month}")
+
+        st.divider()
+        if st.button("Οριστική Υποβολή Ελέγχου Μηνός"):
+            st.success(f"Ο έλεγχος για τον μήνα {target_month} αποθηκεύτηκε!")
