@@ -10,16 +10,14 @@ st.set_page_config(
 )
 
 # --- ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ (BACKEND) ---
-def save_project_data(data_dict):
-    """Αποθηκεύει τα στοιχεία της επιχείρησης σε CSV"""
+def save_data(data_dict, filename):
+    """Γενική συνάρτηση αποθήκευσης σε CSV"""
     df = pd.DataFrame([data_dict])
-    file_exists = os.path.isfile('data_projects.csv')
-    
-    # Χρήση utf-8-sig για να ανοίγει σωστά το Excel με Ελληνικά
-    df.to_csv('data_projects.csv', mode='a', index=False, 
+    file_exists = os.path.isfile(filename)
+    df.to_csv(filename, mode='a', index=False, 
               header=not file_exists, encoding='utf-8-sig')
 
-# --- ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ (NAVIGATION) ---
+# --- ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
 st.sidebar.divider()
 page = st.sidebar.radio(
@@ -32,8 +30,7 @@ page = st.sidebar.radio(
 # --- ΣΤΑΔΙΟ 1: ΣΤΟΙΧΕΙΑ ΕΡΓΟΥ ---
 if page == "1. Στοιχεία Έργου & Επιχείρησης":
     st.header("🏢 Γενικά Στοιχεία Έργου & Επιχείρησης")
-    st.info("Συμπληρώστε τα βασικά στοιχεία της επιχείρησης για την έναρξη του ελέγχου.")
-
+    
     with st.form("main_project_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -44,32 +41,25 @@ if page == "1. Στοιχεία Έργου & Επιχείρησης":
             budget = st.number_input("Συνολικός Προϋπολογισμός (€)", min_value=0.0, step=100.0)
         
         submitted = st.form_submit_button("💾 Αποθήκευση Στοιχείων")
-        
         if submitted:
             if company and afm and mis:
-                project_info = {
-                    "Επωνυμία": company,
-                    "ΑΦΜ": afm,
-                    "MIS": mis,
-                    "Προϋπολογισμός": budget
-                }
-                save_project_data(project_info)
-                st.success("Τα στοιχεία αποθηκεύτηκαν με επιτυχία στο 'data_projects.csv'!")
+                project_info = {"Επωνυμία": company, "ΑΦΜ": afm, "MIS": mis, "Προϋπολογισμός": budget}
+                save_data(project_info, 'data_projects.csv')
+                st.success("Το έργο αποθηκεύτηκε!")
             else:
-                st.warning("Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία (Επωνυμία, ΑΦΜ, MIS).")
+                st.warning("Συμπληρώστε τα υποχρεωτικά πεδία.")
 
-    # Προβολή Ιστορικού
     if os.path.isfile('data_projects.csv'):
         st.divider()
         st.subheader("📋 Καταχωρημένα Έργα")
-        history_df = pd.read_csv('data_projects.csv')
-        st.dataframe(history_df, use_container_width=True)
+        st.dataframe(pd.read_csv('data_projects.csv'), use_container_width=True)
 
 # --- ΣΤΑΔΙΟ 2: ΓΕΝΙΚΑ ΠΑΡΑΔΟΤΕΑ ---
 elif page == "2. Γενικά Παραδοτέα (Checklist)":
     st.header("📂 Λίστα Γενικών Παραδοτέων")
     st.write("Ελέγξτε την πληρότητα των εγγράφων που αφορούν το σύνολο της επιχείρησης.")
 
+    # Η δική σου λίστα εγγράφων
     required_docs = [
         "Πίνακας Προσωπικού Ε4 (Ετήσιος/Συμπληρωματικός)",
         "ΑΠΔ (Αναλυτική Περιοδική Δήλωση)",
@@ -85,11 +75,10 @@ elif page == "2. Γενικά Παραδοτέα (Checklist)":
         "Φορολογική ενημερότητα",
         "Στοιχεία ρυθμίσεων και Πληρωμή",
         "Προσωρινές δηλώσεις ΦΜΥ",
-        "Υπεύθυνη δήλωση περι συγγενών"
+        "Υπεύθυνη δήλωση περι συγγενών",
         "Επιστολή γνωστοποίησης"
     ]
 
-    # Δημιουργία πίνακα Checklist
     for doc in required_docs:
         c1, c2 = st.columns([3, 1])
         with c1:
@@ -104,7 +93,42 @@ elif page == "2. Γενικά Παραδοτέα (Checklist)":
 
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Στοιχεία Μισθοδοσίας ανά Υπάλληλο")
-    st.warning("Αυτή η ενότητα θα παραμετροποιηθεί στο επόμενο βήμα για τη σύνδεση με το OCR.")
-    
-    st.info("Εδώ θα γίνεται η καταχώρηση των υπαλλήλων και ο έλεγχος των ατομικών τους δικαιολογητικών (Αποδείξεις πληρωμής, Συμβάσεις κλπ).")
+    st.header("👤 Διαχείριση Υπαλλήλων")
+
+    if not os.path.isfile('data_projects.csv'):
+        st.error("⚠️ Πρέπει πρώτα να καταχωρήσετε ένα έργο στο Στάδιο 1.")
+    else:
+        projects_df = pd.read_csv('data_projects.csv')
+        project_list = projects_df['Επωνυμία'].tolist()
+        selected_p = st.selectbox("Επιλέξτε Επιχείρηση/Έργο:", project_list)
+
+        # Φόρμα Προσθήκης Υπαλλήλου
+        with st.expander("➕ Προσθήκη Νέου Υπαλλήλου"):
+            with st.form("add_emp"):
+                e_col1, e_col2 = st.columns(2)
+                with e_col1:
+                    name = st.text_input("Ονοματεπώνυμο")
+                    amka = st.text_input("ΑΜΚΑ", max_chars=11)
+                with e_col2:
+                    pos = st.text_input("Θέση/Ειδικότητα")
+                    sal = st.number_input("Μηνιαίος Μισθός (€)", min_value=0.0)
+                
+                if st.form_submit_button("Αποθήκευση Υπαλλήλου"):
+                    if name and amka:
+                        emp_info = {"Έργο": selected_p, "Όνομα": name, "ΑΜΚΑ": amka, "Ειδικότητα": pos, "Μισθός": sal}
+                        save_data(emp_info, 'data_employees.csv')
+                        st.success(f"Ο υπάλληλος {name} προστέθηκε!")
+                    else:
+                        st.error("Το όνομα και το ΑΜΚΑ είναι υποχρεωτικά.")
+
+        # Προβολή Υπαλλήλων
+        if os.path.isfile('data_employees.csv'):
+            st.divider()
+            st.subheader(f"👥 Προσωπικό Έργου: {selected_p}")
+            all_emps = pd.read_csv('data_employees.csv')
+            filtered_emps = all_emps[all_emps['Έργο'] == selected_p]
+            
+            if not filtered_emps.empty:
+                st.dataframe(filtered_emps[['Όνομα', 'ΑΜΚΑ', 'Ειδικότητα', 'Μισθός']], use_container_width=True)
+            else:
+                st.write("Δεν έχουν καταχωρηθεί υπάλληλοι για αυτό το έργο.")
