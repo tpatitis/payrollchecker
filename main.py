@@ -1,35 +1,49 @@
 import streamlit as st
 import pandas as pd
+import os
 
-# Ρύθμιση σελίδας
+# --- ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
+def save_project_data(data_dict):
+    df = pd.DataFrame([data_dict])
+    # Αν το αρχείο δεν υπάρχει, το δημιουργεί με headers. Αν υπάρχει, προσθέτει τη γραμμή.
+    if not os.path.isfile('project_info.csv'):
+        df.to_csv('project_info.csv', index=False, encoding='utf-8-sig')
+    else:
+        df.to_csv('project_info.csv', mode='a', index=False, header=False, encoding='utf-8-sig')
+
+# --- UI ΕΦΑΡΜΟΓΗΣ ---
 st.set_page_config(page_title="Payroll Verifier", layout="wide")
 
-# Πλευρικό Μενού (Navigation)
 st.sidebar.title("Μενού Ελέγχου")
 page = st.sidebar.radio("Επιλέξτε Στάδιο:", 
-    ["Αρχική - Στοιχεία Έργου", 
-     "Γενικά Παραδοτέα", 
-     "Μισθοδοσία Υπαλλήλων"])
+    ["Αρχική - Στοιχεία Έργου", "Γενικά Παραδοτέα", "Μισθοδοσία Υπαλλήλων"])
 
-# --- ΣΤΑΔΙΟ 1: ΣΤΟΙΧΕΙΑ ΕΡΓΟΥ ---
 if page == "Αρχική - Στοιχεία Έργου":
     st.header("🏢 Γενικά Στοιχεία Έργου & Επιχείρησης")
+    
     with st.form("project_form"):
         company = st.text_input("Επωνυμία Επιχείρησης")
+        afm = st.text_input("ΑΦΜ", max_chars=9)
         mis = st.text_input("Κωδικός Έργου")
         budget = st.number_input("Προϋπολογισμός (€)", min_value=0.0)
-        submitted = st.form_submit_button("Αποθήκευση")
+        
+        submitted = st.form_submit_button("Αποθήκευση Στοιχείων")
+        
         if submitted:
-            st.success(f"Το έργο {mis} καταχωρήθηκε τοπικά!")
+            if company and afm and mis:  # Βασικός έλεγχος αν είναι κενά
+                project_data = {
+                    "Επωνυμία": company,
+                    "ΑΦΜ": afm,
+                    "MIS": mis,
+                    "Προϋπολογισμός": budget
+                }
+                save_project_data(project_data)
+                st.success(f"Το έργο '{company}' αποθηκεύτηκε στο αρχείο project_info.csv!")
+            else:
+                st.error("Παρακαλώ συμπληρώστε όλα τα βασικά πεδία.")
 
-# --- ΣΤΑΔΙΟ 2: ΓΕΝΙΚΑ ΠΑΡΑΔΟΤΕΑ ---
-elif page == "Γενικά Παραδοτέα":
-    st.header("📂 Γενικά Παραδοτέα Μισθοδοσίας")
-    st.info("Εδώ θα ανεβαίνουν τα έγγραφα που αφορούν όλη την επιχείρηση (ΑΠΔ, ΦΜΥ κλπ)")
-    # Θα προσθέσουμε το upload logic αργότερα
-
-# --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
-elif page == "Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Στοιχεία Μισθοδοσίας ανά Υπάλληλο")
-    st.write("Συγκεντρωτική κατάσταση και έλεγχος δικαιολογητικών.")
-    # Εδώ θα μπει ο πίνακας και το OCR αργότερα
+    # Προβολή αποθηκευμένων έργων (για επιβεβαίωση)
+    if os.path.isfile('project_info.csv'):
+        st.subheader("📋 Καταχωρημένα Έργα")
+        view_df = pd.read_csv('project_info.csv')
+        st.dataframe(view_df)
