@@ -162,6 +162,7 @@ elif page == "2. Checklist ανά Έργο":
 elif page == "3. Μισθοδοσία":
     st.header("👤 Διαχείριση & Έλεγχος Υπαλλήλων")
     
+    # Φόρτωση επιχειρήσεων για να ξέρουμε πού ανήκουν οι υπάλληλοι
     projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
     
     if projects_df.empty:
@@ -177,17 +178,19 @@ elif page == "3. Μισθοδοσία":
 
         st.divider()
 
-        # 2. ΠΕΔΙΟ ΣΥΜΠΛΗΡΩΣΗΣ ΣΤΟΙΧΕΙΩΝ (Καταχώρηση)
-        st.subheader(f"➕ Προσθήκη Υπαλλήλου στην επιχείρηση {selected_project}")
+        # 2. ΠΕΔΙΟ ΣΥΜΠΛΗΡΩΣΗΣ ΣΤΟΙΧΕΙΩΝ
+        st.subheader(f"➕ Καταχώρηση Νέου Υπαλλήλου ({selected_project})")
         with st.container():
             c1, c2, c3 = st.columns([2, 1, 1])
-            new_emp_name = c1.text_input("Ονοματεπώνυμο Υπαλλήλου", placeholder="π.χ. ΠΑΠΑΔΟΠΟΥΛΟΣ ΙΩΑΝΝΗΣ")
-            new_emp_id = c2.text_input("ΑΦΜ Υπαλλήλου (Προαιρετικό)")
+            new_emp_name = c1.text_input("Ονοματεπώνυμο", placeholder="ΕΠΩΝΥΜΟ ΟΝΟΜΑ", key="new_emp_name_in")
+            new_emp_id = c2.text_input("ΑΦΜ (Προαιρετικό)", key="new_emp_afm_in")
             
-            if c3.button("📥 Καταχώρηση Υπαλλήλου", use_container_width=True):
+            if c3.button("📥 Αποθήκευση στη Λίστα", use_container_width=True):
                 if new_emp_name:
+                    # Χρήση της load_data για ασφάλεια αν το αρχείο είναι κενό
                     emp_df = load_data('data_employees.csv', ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου"])
-                    # Έλεγχος αν υπάρχει ήδη ο υπάλληλος στην ίδια επιχείρηση
+                    
+                    # Έλεγχος αν υπάρχει ήδη
                     exists = emp_df[(emp_df['ΑΦΜ_Εργου'].astype(str) == selected_afm) & 
                                     (emp_df['Ονοματεπώνυμο'] == new_emp_name)]
                     
@@ -195,33 +198,33 @@ elif page == "3. Μισθοδοσία":
                         new_row = pd.DataFrame([{"ΑΦΜ_Εργου": selected_afm, "Ονοματεπώνυμο": new_emp_name, "ΑΦΜ_Υπαλλήλου": new_emp_id}])
                         emp_df = pd.concat([emp_df, new_row], ignore_index=True)
                         save_to_csv(emp_df, 'data_employees.csv')
-                        st.success(f"Ο υπάλληλος {new_emp_name} αποθηκεύτηκε!")
+                        st.success(f"Ο υπάλληλος {new_emp_name} προστέθηκε!")
                         st.rerun()
                     else:
-                        st.warning("Ο υπάλληλος υπάρχει ήδη σε αυτή την επιχείρηση.")
+                        st.warning("Ο υπάλληλος είναι ήδη καταχωρημένος.")
                 else:
-                    st.error("Συμπληρώστε το όνομα του υπαλλήλου.")
+                    st.error("Το όνομα είναι υποχρεωτικό.")
 
         st.divider()
 
-        # 3. DROPDOWN MENU ΕΠΙΛΟΓΗΣ (Από τους αποθηκευμένους)
+        # 3. DROPDOWN MENU ΕΠΙΛΟΓΗΣ
         st.subheader("🔍 Επιλογή Υπαλλήλου για Έλεγχο")
         all_emps_df = load_data('data_employees.csv', ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου"])
-        # Φιλτράρισμα υπαλλήλων μόνο για την επιλεγμένη επιχείρηση
-        current_project_emps = all_emps_df[all_emps_df['ΑΦΜ_Εργου'].astype(str) == selected_afm]['Ονοματεπώνυμο'].tolist()
+        
+        # Φιλτράρισμα μόνο για την τρέχουσα επιχείρηση
+        current_list = all_emps_df[all_emps_df['ΑΦΜ_Εργου'].astype(str) == selected_afm]['Ονοματεπώνυμο'].tolist()
 
-        if not current_project_emps:
-            st.info("Δεν υπάρχουν αποθηκευμένοι υπάλληλοι για αυτή την επιχείρηση. Καταχωρήστε έναν παραπάνω.")
+        if not current_list:
+            st.info("Η λίστα υπαλλήλων είναι κενή. Προσθέστε υπαλλήλους παραπάνω.")
         else:
-            selected_emp = st.selectbox("Επιλέξτε Υπάλληλο από τη λίστα:", ["--- Επιλέξτε ---"] + current_project_emps)
+            selected_emp = st.selectbox("Επιλέξτε από τους καταχωρημένους:", ["--- Λίστα Υπαλλήλων ---"] + current_list)
 
-            if selected_emp != "--- Επιλέξτε ---":
-                st.info(f"📍 Έλεγχος Παραδοτέων: **{selected_emp}** | Μήνας: **{selected_month}**")
+            if selected_emp != "--- Λίστα Υπαλλήλων ---":
+                st.success(f"Επιλέχθηκε: {selected_emp} | Μήνας: {selected_month}")
                 
-                # Εδώ θα έρθουν τα πεδία των παραδοτέων που θα ορίσουμε στη συνέχεια
-                st.write("*(Εδώ θα προστεθούν τα checkbox/upload για τα έγγραφα του υπαλλήλου)*")
-                
-                if st.button("🗑️ Διαγραφή Υπαλλήλου από το αρχείο"):
+                # Εδώ θα βάλουμε τα έγγραφα μόλις μου πεις ποια θέλεις
+                st.write("---")
+                if st.button("🗑️ Διαγραφή Υπαλλήλου από τη βάση"):
                     all_emps_df = all_emps_df[~((all_emps_df['ΑΦΜ_Εργου'].astype(str) == selected_afm) & 
                                                (all_emps_df['Ονοματεπώνυμο'] == selected_emp))]
                     save_to_csv(all_emps_df, 'data_employees.csv')
