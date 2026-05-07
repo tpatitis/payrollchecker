@@ -63,9 +63,10 @@ if page == "1. Στοιχεία Έργου & Επιχείρησης":
             st.info("Δεν υπάρχουν ακόμα καταχωρημένα έργα. Συμπληρώστε τη φόρμα παραπάνω.")
 
 # --- ΣΤΑΔΙΟ 2: ΓΕΝΙΚΑ ΠΑΡΑΔΟΤΕΑ ---
+# --- ΣΤΑΔΙΟ 2: ΓΕΝΙΚΑ ΠΑΡΑΔΟΤΕΑ ---
 elif page == "2. Γενικά Παραδοτέα (Checklist)":
     st.header("📂 Γενικά παραδοτέα μισθοδοσίας (checklist)")
-    st.info("Επιλέξτε την κατάσταση για κάθε γενικό έγγραφο της επιχείρησης.")
+    st.info("Επιλέξτε κατάσταση και προσθέστε παρατηρήσεις όπου απαιτείται.")
 
     required_docs = [
         "Πίνακας Προσωπικού Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ",
@@ -73,31 +74,38 @@ elif page == "2. Γενικά Παραδοτέα (Checklist)":
         "Ασφαλιστική ενημερότητα", "Οικονομική καρτέλα ΕΦΚΑ",
         "Ηλεκτρονική καρτέλα οφειλετών", "Πίνακας χρεών οφειλέτη",
         "Ανάλυση κίνησης Ηλ. Καρτέλας", "Φορολογική ενημερότητα",
-        "Στοιχεία ρυθμίσεων & Πληρωμή", "Προσωρινές δηλώσεις ΦΜΥ",
-         
+        "Στοιχεία ρυθμίσεων & Πληρωμή", "Προσωρινές δηλώσεις ΦΜΥ"
     ]
 
-    # Επιλογές κατάστασης
     options = ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"]
-    
-    col_left, col_right = st.columns(2)
-    half = len(required_docs) // 2
-    
-    with col_left:
-        for doc in required_docs[:half]:
-            c1, c2 = st.columns([1.8, 1.2])
-            c1.markdown(f"<div style='padding-top:10px; font-size:0.9rem;'><b>{doc}</b></div>", unsafe_allow_html=True)
-            c2.selectbox("", options, key=f"ch_{doc}", label_visibility="collapsed")
 
-    with col_right:
-        for doc in required_docs[half:]:
-            c1, c2 = st.columns([1.8, 1.2])
-            c1.markdown(f"<div style='padding-top:10px; font-size:0.9rem;'><b>{doc}</b></div>", unsafe_allow_html=True)
-            c2.selectbox("", options, key=f"ch_{doc}", label_visibility="collapsed")
+    # Δημιουργία επικεφαλίδων για τον πίνακα
+    h1, h2, h3 = st.columns([1.5, 1, 2])
+    h1.caption("📄 Έγγραφο")
+    h2.caption("📊 Κατάσταση")
+    h3.caption("📝 Συγκεκριμένη Παρατήρηση / Ελλείψεις")
+    st.divider()
+
+    # Λίστα εγγράφων σε σειρά (όχι σε 2 στήλες πλέον, για να χωράνε οι παρατηρήσεις)
+    for doc in required_docs:
+        c1, c2, c3 = st.columns([1.5, 1, 2])
+        
+        # Στήλη 1: Τίτλος
+        c1.markdown(f"<div style='padding-top:5px; font-size:0.85rem;'><b>{doc}</b></div>", unsafe_allow_html=True)
+        
+        # Στήλη 2: Κατάσταση (όσο πιο αριστερά γίνεται)
+        c2.selectbox("", options, key=f"ch_{doc}", label_visibility="collapsed")
+        
+        # Στήλη 3: Ξεχωριστό πλαίσιο παρατηρήσεων για κάθε έλλειψη
+        c3.text_input("Σχόλιο...", key=f"note_{doc}", label_visibility="collapsed", placeholder="π.χ. Λείπει η σελίδα 2")
 
     st.divider()
-    with st.expander("📝 Προσθήκη Σημειώσεων Ελεγκτή"):
-        st.text_area("Παρατηρήσεις για τις ελλείψεις...", label_visibility="collapsed")
+    # Το πλαίσιο γενικών σημειώσεων μεταφέρθηκε στο τέλος
+    st.subheader("📝 Γενικές Σημειώσεις Ελέγχου")
+    st.text_area("Συνολικές παρατηρήσεις για το έργο...", key="general_notes", label_visibility="collapsed")
+    
+    if st.button("💾 Προσωρινή Αποθήκευση Checklist"):
+        st.success("Οι παρατηρήσεις αποθηκεύτηκαν!")
 
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
