@@ -78,7 +78,7 @@ elif page == "2. Γενικά Παραδοτέα (Checklist)":
     ]
 
     # Επιλογές κατάστασης
-    options = ["Λείπει", "Πλήρες", "Δεν απαιτείται"]
+    options = ["Έλλειψη", "Υπάρχει", "Δεν απαιτείται"]
     
     col_left, col_right = st.columns(2)
     half = len(required_docs) // 2
