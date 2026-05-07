@@ -3,166 +3,97 @@ import pandas as pd
 import os
 
 # --- ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ ---
-st.set_page_config(
-    page_title="Payroll Verifier Pro",
-    page_icon="🛡️",
-    layout="wide"
-)
+st.set_page_config(page_title="Payroll Verifier Pro", layout="wide")
 
-# --- ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
-def save_data(data_dict, filename):
-    """Αποθηκεύει δεδομένα σε αρχείο CSV με υποστήριξη Ελληνικών"""
-    df = pd.DataFrame([data_dict])
-    file_exists = os.path.isfile(filename)
-    df.to_csv(filename, mode='a', index=False, 
-              header=not file_exists, encoding='utf-8-sig')
+# --- ΑΡΧΕΙΑ ΔΕΔΟΜΕΝΩΝ ---
+PROJECTS_FILE = 'data_projects.csv'
+CHECKLIST_FILE = 'checklist_results.csv'
 
-# --- ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ (NAVIGATION) ---
-st.sidebar.title("📑 Μενού Διαχείρισης")
-st.sidebar.divider()
-page = st.sidebar.radio(
-    "Μετάβαση σε:",
-    ["1. Στοιχεία Έργου & Επιχείρησης", 
-     "2. Γενικά Παραδοτέα (Checklist)", 
-     "3. Μισθοδοσία Υπαλλήλων"]
-)
+# --- ΣΥΝΑΡΤΗΣΕΙΣ ---
+def load_data(filename, columns):
+    if not os.path.isfile(filename) or os.path.getsize(filename) == 0:
+        return pd.DataFrame(columns=columns)
+    try:
+        return pd.read_csv(filename)
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame(columns=columns)
 
-# --- ΣΤΑΔΙΟ 1: ΣΤΟΙΧΕΙΑ ΕΡΓΟΥ ---
-if page == "1. Στοιχεία Έργου & Επιχείρησης":
-    st.header("🏢 Διαχείριση Έργων")
+def save_to_csv(df, filename):
+    df.to_csv(filename, index=False, encoding='utf-8-sig')
+
+# --- ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
+page = st.sidebar.radio("Μενού:", ["1. Διαχείριση Έργων", "2. Checklist ανά Έργο", "3. Μισθοδοσία"])
+
+# --- ΣΤΑΔΙΟ 1: ΔΙΑΧΕΙΡΙΣΗ ΕΡΓΩΝ (CRUD) ---
+if page == "1. Διαχείριση Έργων":
+    st.header("🏢 Διαχείριση Επιχειρήσεων")
     
     # Φόρμα Καταχώρησης
-    with st.expander("➕ Προσθήκη Νέου Έργου"):
-        with st.form("main_project_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                company = st.text_input("Επωνυμία Επιχείρησης")
-                afm = st.text_input("ΑΦΜ", max_chars=9)
-            with col2:
-                mis = st.text_input("Κωδικός Έργου")
-                budget = st.number_input("Προϋπολογισμός (€)", min_value=0.0)
-            
-            if st.form_submit_button("💾 Αποθήκευση"):
-                if company and afm:
-                    project_info = {"Επωνυμία": company, "ΑΦΜ": afm, "MIS": mis, "Προϋπολογισμός": budget}
-                    save_data(project_info, 'data_projects.csv')
-                    st.rerun()
+    with st.expander("➕ Προσθήκη / Επεξεργασία Έργου"):
+        with st.form("project_form"):
+            name = st.text_input("Επωνυμία")
+            afm = st.text_input("ΑΦΜ", max_chars=9)
+            mis = st.text_input("MIS")
+            if st.form_submit_button("Αποθήκευση"):
+                df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS"])
+                if afm in df['ΑΦΜ'].astype(str).values:
+                    df.loc[df['ΑΦΜ'].astype(str) == afm, ["Επωνυμία", "MIS"]] = [name, mis]
+                else:
+                    new_row = pd.DataFrame([{"Επωνυμία": name, "ΑΦΜ": afm, "MIS": mis}])
+                    df = pd.concat([df, new_row], ignore_index=True)
+                save_to_csv(df, PROJECTS_FILE)
+                st.success("Ενημερώθηκε!")
+                st.rerun()
 
-    # Προβολή και Διαχείριση
-    if os.path.isfile('data_projects.csv'):
-        df = pd.read_csv('data_projects.csv')
-        st.subheader("📋 Λίστα Καταχωρημένων Έργων")
-        
-        for index, row in df.iterrows():
-            with st.container():
-                c1, c2, c3, c4 = st.columns([3, 2, 1, 1])
-                c1.write(f"**{row['Επωνυμία']}** (ΑΦΜ: {row['ΑΦΜ']})")
-                c2.write(f"MIS: {row['MIS']}")
-                
-                if c4.button("🗑️", key=f"del_{index}"):
-                    df = df.drop(index)
-                    df.to_csv('data_projects.csv', index=False, encoding='utf-8-sig')
-                    st.rerun()
-                st.divider()
+    # Πίνακας με κουμπί Διαγραφής
+    df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS"])
+    if not df.empty:
+        st.subheader("Καταχωρημένα Έργα")
+        for i, row in df.iterrows():
+            cols = st.columns([3, 2, 1, 1])
+            cols[0].write(row['Επωνυμία'])
+            cols[1].write(f"ΑΦΜ: {row['ΑΦΜ']}")
+            if cols[3].button("🗑️", key=f"del_{row['ΑΦΜ']}"):
+                df = df.drop(i)
+                save_to_csv(df, PROJECTS_FILE)
+                st.rerun()
 
-# --- ΣΤΑΔΙΟ 2: ΓΕΝΙΚΑ ΠΑΡΑΔΟΤΕΑ ---
-elif page == "2. Γενικά Παραδοτέα (Checklist)":
-    st.header("📂 Γενικά παραδοτέα μισθοδοσίας (checklist)")
-    st.info("Επιλέξτε κατάσταση και προσθέστε παρατηρήσεις όπου απαιτείται.")
-
-    required_docs = [
-        "Πίνακας Προσωπικού Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ",
-        "ΑΠΔ ΤΕΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ", "Υπεύθυνη δήλωση συγγενών", "Επιστολή γνωστοποίησης", 
-        "Ασφαλιστική ενημερότητα", "Οικονομική καρτέλα ΕΦΚΑ",
-        "Ηλεκτρονική καρτέλα οφειλετών", "Πίνακας χρεών οφειλέτη",
-        "Ανάλυση κίνησης Ηλ. Καρτέλας", "Φορολογική ενημερότητα",
-        "Στοιχεία ρυθμίσεων & Πληρωμή", "Προσωρινές δηλώσεις ΦΜΥ"
-    ]
-
-    options = ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"]
-
-    # Ρύθμιση αναλογιών στηλών: 1.2 (Όνομα), 0.8 (Κατάσταση), 3.0 (Παρατηρήσεις)
-    # Η μικρή τιμή στο δεύτερο νούμερο φέρνει το κουμπί πιο αριστερά
-    h1, h2, h3 = st.columns([1.2, 0.8, 3.0])
-    h1.caption("📄 Έγγραφο")
-    h2.caption("📊 Κατάσταση")
-    h3.caption("📝 Συγκεκριμένη Παρατήρηση / Ελλείψεις")
-    st.divider()
-
-    for doc in required_docs:
-        # Χρησιμοποιούμε gap="small" για να κολλήσουν οι στήλες μεταξύ τους
-        c1, c2, c3 = st.columns([1.2, 0.8, 3.0], gap="small")
-        
-        # Στήλη 1: Τίτλος
-        c1.markdown(f"<div style='padding-top:5px; font-size:0.85rem;'><b>{doc}</b></div>", unsafe_allow_html=True)
-        
-        # Στήλη 2: Κατάσταση (Πολύ κοντά στην πρώτη στήλη)
-        c2.selectbox("", options, key=f"ch_{doc}", label_visibility="collapsed")
-        
-        # Στήλη 3: Παρατηρήσεις (Πιάνει τον υπόλοιπο χώρο δεξιά)
-        c3.text_input("Σχόλιο...", key=f"note_{doc}", label_visibility="collapsed", placeholder="Προσθέστε σχόλιο αν υπάρχει έλλειψη")
-
-    st.divider()
-    st.subheader("📝 Γενικές Σημειώσεις Ελέγχου")
-    st.text_area("Συνολικές παρατηρήσεις για το έργο...", key="general_notes", label_visibility="collapsed")
+# --- ΣΤΑΔΙΟ 2: CHECKLIST ΑΝΑ ΕΡΓΟ ---
+elif page == "2. Checklist ανά Έργο":
+    st.header("📂 Checklist Παραδοτέων")
+    projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS"])
     
-    if st.button("💾 Αποθήκευση Checklist"):
-        st.success("Η κατάσταση αποθηκεύτηκε!")
-
-# --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
-elif page == "3. Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Διαχείριση Υπαλλήλων & Παραδοτέων")
-
-    # Έλεγχος αν υπάρχει το αρχείο και αν είναι αναγνώσιμο
-    if not os.path.isfile('data_projects.csv'):
-        st.error("⚠️ Δεν βρέθηκαν καταχωρημένα έργα. Παρακαλώ καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
+    if projects_df.empty:
+        st.warning("Πρώτα καταχωρήστε έργο στο Στάδιο 1.")
     else:
-        try:
-            projects_df = pd.read_csv('data_projects.csv')
-            
-            if projects_df.empty:
-                st.warning("⚠️ Η λίστα επιχειρήσεων είναι άδεια. Καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
-            else:
-                # Αν όλα είναι οκ, προχωράμε στην εμφάνιση
-                selected_p = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'].unique())
-                
-                target_month = st.selectbox("Μήνας Ελέγχου:", 
-                    ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", 
-                     "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
+        # Επιλογή Έργου
+        selected_name = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'])
+        selected_afm = projects_df[projects_df['Επωνυμία'] == selected_name]['ΑΦΜ'].iloc[0]
 
-                st.divider()
+        # Φόρτωση παλιών απαντήσεων για το συγκεκριμένο ΑΦΜ
+        check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
+        
+        required_docs = ["Πίνακας Ε4", "ΑΠΔ ΕΦΚΑ", "Φορολογική Ενημερότητα", "Ασφαλιστική Ενημερότητα"]
+        
+        st.subheader(f"Έλεγχος για: {selected_name}")
+        
+        results = []
+        for doc in required_docs:
+            # Εύρεση προηγούμενης τιμής
+            existing = check_df[(check_df['ΑΦΜ'] == selected_afm) & (check_df['Εγγραφο'] == doc)]
+            prev_status = existing['Κατάσταση'].iloc[0] if not existing.empty else "Έλλειψη ❌"
+            prev_note = existing['Σχόλιο'].iloc[0] if not existing.empty else ""
 
-                tab1, tab2 = st.tabs(["📋 Μόνιμα Έγγραφα", "💰 Μηνιαία Παραδοτέα"])
+            c1, c2, c3 = st.columns([1.2, 0.8, 2.5], gap="small")
+            c1.write(f"**{doc}**")
+            status = c2.selectbox("", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(prev_status), key=f"st_{selected_afm}_{doc}")
+            note = c3.text_input("Παρατήρηση", value=prev_note, key=f"nt_{selected_afm}_{doc}")
+            results.append({"ΑΦΜ": selected_afm, "Εγγραφο": doc, "Κατάσταση": status, "Σχόλιο": note})
 
-                with tab1:
-                    st.subheader("Γενικά Έγγραφα Εργαζομένου")
-                    col_a, col_b = st.columns(2)
-                    with col_a:
-                        st.file_uploader("Αναγγελία Πρόσληψης (Ε3)", type=['pdf', 'jpg', 'png'], key="e3_up")
-                    with col_b:
-                        st.file_uploader("Ταυτότητα (ΑΔΤ)", type=['pdf', 'jpg', 'png'], key="id_up")
-
-                with tab2:
-                    st.subheader(f"Παραδοτέα Μηνός: {target_month}")
-                    monthly_docs = [
-                        "Extrait Τραπέζης", 
-                        "Παραστατικό Πληρωμής", 
-                        "Λογιστικό Άρθρο Καταχώρησης", 
-                        "Λογιστικό Άρθρο Πληρωμής", 
-                        "Βιβλίο Εσόδων-Εξόδων"
-                    ]
-                    
-                    options_status = ["Προς Έλεγχο", "Έχει Ανέβει", "Λανθασμένο Αρχείο", "Ολοκληρώθηκε"]
-
-                    for m_doc in monthly_docs:
-                        mc1, mc2, mc3 = st.columns([2, 1, 1.2])
-                        mc1.markdown(f"<div style='padding-top:10px;'>📄 {m_doc}</div>", unsafe_allow_html=True)
-                        mc2.file_uploader("Upload", type=['pdf', 'jpg', 'png'], key=f"up_{m_doc}_{target_month}", label_visibility="collapsed")
-                        mc3.selectbox("", options_status, key=f"st_{m_doc}_{target_month}", label_visibility="collapsed")
-
-                st.divider()
-                if st.button("💾 Αποθήκευση Κατάστασης Ελέγχου"):
-                    st.toast(f"Οι αλλαγές για τον μήνα {target_month} αποθηκεύτηκαν!")
-
-        except (pd.errors.EmptyDataError, KeyError):
-            st.error("⚠️ Το αρχείο δεδομένων είναι κατεστραμμένο ή άδειο. Παρακαλώ διαγράψτε το αρχείο 'data_projects.csv' από το GitHub ή κάντε μια νέα καταχώρηση στο Στάδιο 1.")
+        if st.button("💾 Οριστική Αποθήκευση Checklist"):
+            # Αφαιρούμε τα παλιά δεδομένα του συγκεκριμένου ΑΦΜ και προσθέτουμε τα νέα
+            check_df = check_df[check_df['ΑΦΜ'] != selected_afm]
+            new_data = pd.DataFrame(results)
+            check_df = pd.concat([check_df, new_data], ignore_index=True)
+            save_to_csv(check_df, CHECKLIST_FILE)
+            st.success(f"Το checklist για την επιχείρηση {selected_name} αποθηκεύτηκε!")
