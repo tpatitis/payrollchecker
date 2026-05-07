@@ -9,9 +9,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ (BACKEND) ---
+# --- ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
 def save_data(data_dict, filename):
-    """Γενική συνάρτηση αποθήκευσης σε CSV"""
     df = pd.DataFrame([data_dict])
     file_exists = os.path.isfile(filename)
     df.to_csv(filename, mode='a', index=False, 
@@ -54,7 +53,40 @@ if page == "1. Στοιχεία Έργου & Επιχείρησης":
         st.subheader("📋 Καταχωρημένα Έργα")
         st.dataframe(pd.read_csv('data_projects.csv'), use_container_width=True)
 
-2. Γενικά Παραδοτέα (Checklist)
+# --- ΣΤΑΔΙΟ 2: ΓΕΝΙΚΑ ΠΑΡΑΔΟΤΕΑ ---
+elif page == "2. Γενικά Παραδοτέα (Checklist)":
+    st.header("📂 Έλεγχος Φακέλου Επιχείρησης")
+    st.info("Επιλέξτε την κατάσταση για κάθε γενικό έγγραφο.")
+
+    required_docs = [
+        "Πίνακας Προσωπικού Ε4", "ΑΠΔ ΕΦΚΑ", "Αποδεικτικό ΑΠΔ",
+        "ΑΠΔ ΤΕΚΑ", "Αποδεικτικό ΤΕΚΑ", "Μισθολογικές καταστάσεις",
+        "Ασφαλιστική ενημερότητα", "Οικονομική καρτέλα ΕΦΚΑ",
+        "Ηλεκτρονική καρτέλα οφειλετών", "Πίνακας χρεών οφειλέτη",
+        "Ανάλυση κίνησης Ηλ. Καρτέλας", "Φορολογική ενημερότητα",
+        "Στοιχεία ρυθμίσεων & Πληρωμή", "Προσωρινές δηλώσεις ΦΜΥ",
+        "Υπεύθυνη δήλωση συγγενών", "Επιστολή γνωστοποίησης"
+    ]
+
+    col_left, col_right = st.columns(2)
+    half = len(required_docs) // 2
+    
+    with col_left:
+        for doc in required_docs[:half]:
+            c1, c2 = st.columns([2, 1])
+            c1.markdown(f"<div style='font-size:0.9rem;'>{doc}</div>", unsafe_allow_html=True)
+            c2.selectbox("", ["❌", "✅", "⚠️"], key=f"ch_{doc}", label_visibility="collapsed")
+
+    with col_right:
+        for doc in required_docs[half:]:
+            c1, c2 = st.columns([2, 1])
+            c1.markdown(f"<div style='font-size:0.9rem;'>{doc}</div>", unsafe_allow_html=True)
+            c2.selectbox("", ["❌", "✅", "⚠️"], key=f"ch_{doc}", label_visibility="collapsed")
+
+    st.divider()
+    with st.expander("📝 Προσθήκη Σημειώσεων"):
+        st.text_area("Γράψτε παρατηρήσεις...", label_visibility="collapsed")
+
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
     st.header("👤 Διαχείριση Υπαλλήλων & Παραδοτέων")
@@ -64,46 +96,30 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
     else:
         projects_df = pd.read_csv('data_projects.csv')
         selected_p = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'].unique())
-
-        # Επιλογή Μήνα Ελέγχου
+        
         target_month = st.selectbox("Μήνας Ελέγχου:", 
             ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", 
              "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
 
-        st.divider()
-
-        # 1. Μόνιμα Έγγραφα Υπαλλήλου (Tabs για οργάνωση)
         tab1, tab2 = st.tabs(["📋 Μόνιμα Έγγραφα", "💰 Μηνιαία Παραδοτέα"])
 
         with tab1:
             st.subheader("Γενικά Έγγραφα Εργαζομένου")
             col_a, col_b = st.columns(2)
             with col_a:
-                st.file_uploader("Αναγγελία Πρόσληψης (Ε3)", type=['pdf', 'jpg', 'png'])
+                st.file_uploader("Αναγγελία Πρόσληψης (Ε3)", type=['pdf', 'jpg', 'png'], key="e3")
             with col_b:
-                st.file_uploader("Ταυτότητα", type=['pdf', 'jpg', 'png'])
+                st.file_uploader("Ταυτότητα", type=['pdf', 'jpg', 'png'], key="id")
 
         with tab2:
             st.subheader(f"Παραδοτέα Μηνός: {target_month}")
-            
-            # Λίστα με τα μηνιαία που ορίσαμε
             monthly_docs = [
-                "Extrait Τραπέζης (Κίνηση Λογαριασμού)",
-                "Παραστατικό Πληρωμής (Screenshot/Pay-slip)",
-                "Λογιστικό Άρθρο Καταχώρησης (Διπλογραφικά)",
-                "Λογιστικό Άρθρο Πληρωμής (Διπλογραφικά)",
-                "Βιβλίο Εσόδων-Εξόδων (Απλογραφικά)"
+                "Extrait Τραπέζης", "Παραστατικό Πληρωμής", 
+                "Λογιστικό Άρθρο Καταχώρησης", "Λογιστικό Άρθρο Πληρωμής", 
+                "Βιβλίο Εσόδων-Εξόδων"
             ]
-
-            for doc in monthly_docs:
-                c1, c2, c3 = st.columns([2, 1, 1])
-                with c1:
-                    st.write(f"📄 {doc}")
-                with c2:
-                    st.file_uploader("Upload", type=['pdf', 'jpg', 'png'], key=f"{doc}_{target_month}", label_visibility="collapsed")
-                with c3:
-                    st.selectbox("Status", ["❌", "✅", "⚠️"], key=f"stat_{doc}_{target_month}")
-
-        st.divider()
-        if st.button("Οριστική Υποβολή Ελέγχου Μηνός"):
-            st.success(f"Ο έλεγχος για τον μήνα {target_month} αποθηκεύτηκε!")
+            for m_doc in monthly_docs:
+                mc1, mc2, mc3 = st.columns([2, 1, 1])
+                mc1.write(f"📄 {m_doc}")
+                mc2.file_uploader("Upload", type=['pdf', 'jpg', 'png'], key=f"up_{m_doc}", label_visibility="collapsed")
+                mc3.selectbox("Status", ["❌", "✅", "⚠️"], key=f"st_{m_doc}")
