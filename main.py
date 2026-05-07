@@ -110,47 +110,56 @@ elif page == "2. Γενικά Παραδοτέα (Checklist)":
 elif page == "3. Μισθοδοσία Υπαλλήλων":
     st.header("👤 Διαχείριση Υπαλλήλων & Παραδοτέων")
 
+    # Έλεγχος αν υπάρχει το αρχείο και αν είναι αναγνώσιμο
     if not os.path.isfile('data_projects.csv'):
-        st.error("⚠️ Παρακαλώ καταχωρήστε πρώτα ένα έργο στο Στάδιο 1.")
+        st.error("⚠️ Δεν βρέθηκαν καταχωρημένα έργα. Παρακαλώ καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
     else:
-        projects_df = pd.read_csv('data_projects.csv')
-        selected_p = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'].unique())
-        
-        target_month = st.selectbox("Μήνας Ελέγχου:", 
-            ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", 
-             "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
-
-        st.divider()
-
-        tab1, tab2 = st.tabs(["📋 Μόνιμα Έγγραφα", "💰 Μηνιαία Παραδοτέα"])
-
-        with tab1:
-            st.subheader("Γενικά Έγγραφα Εργαζομένου")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.file_uploader("Αναγγελία Πρόσληψης (Ε3)", type=['pdf', 'jpg', 'png'], key="e3_up")
-            with col_b:
-                st.file_uploader("Ταυτότητα (ΑΔΤ)", type=['pdf', 'jpg', 'png'], key="id_up")
-
-        with tab2:
-            st.subheader(f"Παραδοτέα Μηνός: {target_month}")
-            monthly_docs = [
-                "Extrait Τραπέζης", 
-                "Παραστατικό Πληρωμής", 
-                "Λογιστικό Άρθρο Καταχώρησης", 
-                "Λογιστικό Άρθρο Πληρωμής", 
-                "Βιβλίο Εσόδων-Εξόδων"
-            ]
+        try:
+            projects_df = pd.read_csv('data_projects.csv')
             
-            # Λεκτικά Status για τα μηνιαία
-            options_status = ["Προς Έλεγχο", "Έχει Ανέβει", "Λανθασμένο Αρχείο", "Ολοκληρώθηκε"]
+            if projects_df.empty:
+                st.warning("⚠️ Η λίστα επιχειρήσεων είναι άδεια. Καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
+            else:
+                # Αν όλα είναι οκ, προχωράμε στην εμφάνιση
+                selected_p = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'].unique())
+                
+                target_month = st.selectbox("Μήνας Ελέγχου:", 
+                    ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", 
+                     "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
 
-            for m_doc in monthly_docs:
-                mc1, mc2, mc3 = st.columns([2, 1, 1.2])
-                mc1.markdown(f"<div style='padding-top:10px;'>📄 {m_doc}</div>", unsafe_allow_html=True)
-                mc2.file_uploader("Upload", type=['pdf', 'jpg', 'png'], key=f"up_{m_doc}_{target_month}", label_visibility="collapsed")
-                mc3.selectbox("", options_status, key=f"st_{m_doc}_{target_month}", label_visibility="collapsed")
+                st.divider()
 
-        st.divider()
-        if st.button("💾 Αποθήκευση Κατάστασης Ελέγχου"):
-            st.toast(f"Οι αλλαγές για τον μήνα {target_month} αποθηκεύτηκαν!")
+                tab1, tab2 = st.tabs(["📋 Μόνιμα Έγγραφα", "💰 Μηνιαία Παραδοτέα"])
+
+                with tab1:
+                    st.subheader("Γενικά Έγγραφα Εργαζομένου")
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.file_uploader("Αναγγελία Πρόσληψης (Ε3)", type=['pdf', 'jpg', 'png'], key="e3_up")
+                    with col_b:
+                        st.file_uploader("Ταυτότητα (ΑΔΤ)", type=['pdf', 'jpg', 'png'], key="id_up")
+
+                with tab2:
+                    st.subheader(f"Παραδοτέα Μηνός: {target_month}")
+                    monthly_docs = [
+                        "Extrait Τραπέζης", 
+                        "Παραστατικό Πληρωμής", 
+                        "Λογιστικό Άρθρο Καταχώρησης", 
+                        "Λογιστικό Άρθρο Πληρωμής", 
+                        "Βιβλίο Εσόδων-Εξόδων"
+                    ]
+                    
+                    options_status = ["Προς Έλεγχο", "Έχει Ανέβει", "Λανθασμένο Αρχείο", "Ολοκληρώθηκε"]
+
+                    for m_doc in monthly_docs:
+                        mc1, mc2, mc3 = st.columns([2, 1, 1.2])
+                        mc1.markdown(f"<div style='padding-top:10px;'>📄 {m_doc}</div>", unsafe_allow_html=True)
+                        mc2.file_uploader("Upload", type=['pdf', 'jpg', 'png'], key=f"up_{m_doc}_{target_month}", label_visibility="collapsed")
+                        mc3.selectbox("", options_status, key=f"st_{m_doc}_{target_month}", label_visibility="collapsed")
+
+                st.divider()
+                if st.button("💾 Αποθήκευση Κατάστασης Ελέγχου"):
+                    st.toast(f"Οι αλλαγές για τον μήνα {target_month} αποθηκεύτηκαν!")
+
+        except (pd.errors.EmptyDataError, KeyError):
+            st.error("⚠️ Το αρχείο δεδομένων είναι κατεστραμμένο ή άδειο. Παρακαλώ διαγράψτε το αρχείο 'data_projects.csv' από το GitHub ή κάντε μια νέα καταχώρηση στο Στάδιο 1.")
