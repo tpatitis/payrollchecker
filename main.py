@@ -127,11 +127,13 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
         st.warning("⚠️ Παρακαλώ καταχωρήστε πρώτα μια επιχείρηση στο Στάδιο 1.")
     else:
         # 1. Επιλογή Επιχείρησης & Μήνα
-        col_sel1= st.columns
+        col_sel1, col_sel2 = st.columns(2)
         with col_sel1:
             selected_project = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'], key="p_select")
             selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_project]['ΑΦΜ'].iloc[0])
-        
+        with col_sel2:
+            selected_month = st.selectbox("Μήνας Ελέγχου:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
+
         st.divider()
 
         # 2. ΠΕΔΙΟ ΣΥΜΠΛΗΡΩΣΗΣ ΣΤΟΙΧΕΙΩΝ
