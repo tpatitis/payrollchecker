@@ -136,111 +136,96 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
     if projects_df.empty:
         st.warning("⚠️ Καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
     else:
-        # 1. Επιλογή Επιχείρησης, Μήνα & Έτους
-        col_sel1, col_sel2, col_sel3 = st.columns([2, 1, 1])
-        with col_sel1:
-            selected_project = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'], key="p_select")
+        # --- ΠΑΝΩ ΜΕΡΟΣ: 2 ΚΥΡΙΕΣ ΣΤΗΛΕΣ ---
+        top_left, top_right = st.columns([1, 1.2], gap="large")
+
+        with top_left:
+            st.subheader("🏢 Επιλογή Στοιχείων")
+            selected_project = st.selectbox("Επιχείρηση:", projects_df['Επωνυμία'], key="p_select")
             selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_project]['ΑΦΜ'].iloc[0])
-        with col_sel2:
-            selected_month = st.selectbox("Μήνας:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
-        with col_sel3:
-            selected_year = st.selectbox("Έτος:", ["2023", "2024", "2025", "2026", "2027"], index=1)
-
-        period = f"{selected_month} {selected_year}"
-        st.divider()
-
-        # 2. ΠΕΔΙΟ ΣΥΜΠΛΗΡΩΣΗΣ ΣΤΟΙΧΕΙΩΝ ΥΠΑΛΛΗΛΟΥ
-        st.subheader(f"➕ Καταχώρηση / Επεξεργασία Υπαλλήλου ({selected_project})")
-        with st.container():
-            c1, c2, c3, c4 = st.columns([1.5, 1, 1, 0.8])
-            new_emp_name = c1.text_input("Ονοματεπώνυμο", placeholder="ΕΠΩΝΥΜΟ ΟΝΟΜΑ", key="new_emp_name_in")
-            new_emp_afm = c2.text_input("ΑΦΜ Υπαλλήλου", key="new_emp_afm_in", max_chars=9)
-            new_emp_amka = c3.text_input("ΑΜΚΑ Υπαλλήλου", key="new_emp_amka_in", max_chars=11)
             
-            if c4.button("📥 Αποθήκευση", use_container_width=True):
+            c_m, c_y = st.columns(2)
+            selected_month = c_m.selectbox("Μήνας:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
+            selected_year = c_y.selectbox("Έτος:", ["2023", "2024", "2025", "2026", "2027"], index=1)
+            period = f"{selected_month} {selected_year}"
+
+        with top_right:
+            st.subheader("➕ Νέος Υπάλληλος")
+            # Πιο μαζεμένη καταχώρηση σε 2 γραμμές
+            r1_c1, r1_c2 = st.columns([2, 1])
+            new_emp_name = r1_c1.text_input("Ονοματεπώνυμο", placeholder="ΕΠΩΝΥΜΟ ΟΝΟΜΑ", key="new_emp_name_in")
+            new_emp_afm = r1_c2.text_input("ΑΦΜ", key="new_emp_afm_in", max_chars=9)
+            
+            r2_c1, r2_c2 = st.columns([2, 1])
+            new_emp_amka = r2_c1.text_input("ΑΜΚΑ", key="new_emp_amka_in", max_chars=11)
+            if r2_c2.button("📥 Αποθήκευση", use_container_width=True):
                 if new_emp_name and new_emp_afm:
                     emp_df = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
                     mask = (emp_df['ΑΦΜ_Εργου'].astype(str) == selected_afm) & (emp_df['ΑΦΜ_Υπαλλήλου'].astype(str) == new_emp_afm)
-                    
                     if not emp_df[mask].empty:
                         emp_df.loc[mask, ["Ονοματεπώνυμο", "ΑΜΚΑ_Υπαλλήλου"]] = [new_emp_name, new_emp_amka]
-                        st.info("🔄 Τα στοιχεία του υπαλλήλου ενημερώθηκαν.")
                     else:
                         new_row = pd.DataFrame([{"ΑΦΜ_Εργου": selected_afm, "Ονοματεπώνυμο": new_emp_name, "ΑΦΜ_Υπαλλήλου": new_emp_afm, "ΑΜΚΑ_Υπαλλήλου": new_emp_amka}])
                         emp_df = pd.concat([emp_df, new_row], ignore_index=True)
-                        st.success(f"✅ Ο υπάλληλος {new_emp_name} προστέθηκε!")
-                    
                     save_to_csv(emp_df, EMPLOYEES_FILE)
                     st.rerun()
-                else:
-                    st.error("⚠️ Το Ονοματεπώνυμο και το ΑΦΜ είναι υποχρεωτικά.")
 
-        st.divider()
+        st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
 
-        # 3. DROPDOWN MENU ΕΠΙΛΟΓΗΣ ΥΠΑΛΛΗΛΟΥ
-        st.subheader("🔍 Επιλογή Υπαλλήλου για Έλεγχο")
+        # --- ΚΑΤΩ ΜΕΡΟΣ: ΕΠΙΛΟΓΗ ΚΑΙ ΕΛΕΓΧΟΣ ---
         all_emps_df = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
         current_emps = all_emps_df[all_emps_df['ΑΦΜ_Εργου'].astype(str) == selected_afm]
         emp_options = current_emps.apply(lambda x: f"{x['Ονοματεπώνυμο']} (ΑΦΜ: {x['ΑΦΜ_Υπαλλήλου']})", axis=1).tolist()
 
         if not emp_options:
-            st.info("💡 Η λίστα υπαλλήλων είναι κενή. Προσθέστε υπαλλήλους παραπάνω.")
+            st.info("💡 Η λίστα υπαλλήλων είναι κενή.")
         else:
-            selected_option = st.selectbox("Επιλέξτε Υπάλληλο:", ["--- Επιλογή ---"] + emp_options)
-
+            sel_col1, sel_col2 = st.columns([2, 1])
+            selected_option = sel_col1.selectbox("🔍 Επιλογή Υπαλλήλου για Έλεγχο:", ["--- Επιλογή ---"] + emp_options, label_visibility="collapsed")
+            
             if selected_option != "--- Επιλογή ---":
                 sel_emp_afm = selected_option.split("(ΑΦΜ: ")[1].replace(")", "")
                 emp_data = current_emps[current_emps['ΑΦΜ_Υπαλλήλου'].astype(str) == sel_emp_afm].iloc[0]
                 
-                st.info(f"👤 **Υπάλληλος:** {emp_data['Ονοματεπώνυμο']} | **ΑΜΚΑ:** {emp_data['ΑΜΚΑ_Υπαλλήλου']}")
+                st.markdown(f"<div style='background-color:#f0f2f6; padding:10px; border-radius:5px; margin-bottom:15px;'>"
+                            f"👤 <b>{emp_data['Ονοματεπώνυμο']}</b> | ΑΜΚΑ: {emp_data['ΑΜΚΑ_Υπαλλήλου']} | Περίοδος: {period}</div>", unsafe_allow_html=True)
                 
-                # Φόρτωση ελέγχων
                 audit_df = load_data(PAYROLL_CHECKS_FILE, ["ID_Κλειδί", "Έγγραφο", "Κατάσταση", "Σχόλιο"])
 
-                # --- Α. ΚΕΝΤΡΙΚΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ---
-                st.subheader("📌 Κεντρικά Δικαιολογητικά (Άπαξ)")
-                perm_docs = ["Αναγγελία Πρόσληψης (Ε3)", "Ταυτότητα Εργαζομένου"]
-                perm_results = []
-                for p_doc in perm_docs:
-                    p_key = f"PERM_{selected_afm}_{sel_emp_afm}_{p_doc}"
-                    existing_p = audit_df[audit_df['ID_Κλειδί'] == p_key]
-                    p_val = existing_p['Κατάσταση'].iloc[0] if not existing_p.empty else "Έλλειψη ❌"
-                    p_note = existing_p['Σχόλιο'].iloc[0] if not existing_p.empty and pd.notna(existing_p['Σχόλιο'].iloc[0]) else ""
+                # ΣΥΝΑΡΤΗΣΗ ΓΙΑ ΜΙΚΡΟΤΕΡΑ ΚΕΝΑ ΣΤΙΣ ΓΡΑΜΜΕΣ
+                def render_check_row(label, key_id, current_df):
+                    existing = current_df[current_df['ID_Κλειδί'] == key_id]
+                    val = existing['Κατάσταση'].iloc[0] if not existing.empty else "Έλλειψη ❌"
+                    note = existing['Σχόλιο'].iloc[0] if not existing.empty and pd.notna(existing['Σχόλιο'].iloc[0]) else ""
                     
-                    pc1, pc2, pc3 = st.columns([1.5, 1, 2], gap="small")
-                    pc1.markdown(f"<div style='margin-top:5px; font-size:0.85rem;'><b>{p_doc}</b></div>", unsafe_allow_html=True)
-                    p_status = pc2.selectbox("Status", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(p_val), key=f"p_st_{p_key}", label_visibility="collapsed")
-                    p_comment = pc3.text_input("Παρατήρηση", value=p_note, key=f"p_nt_{p_key}", label_visibility="collapsed")
-                    perm_results.append({"ID_Κλειδί": p_key, "Έγγραφο": p_doc, "Κατάσταση": p_status, "Σχόλιο": p_comment})
+                    c1, c2, c3 = st.columns([1.5, 1, 2], gap="small")
+                    c1.markdown(f"<div style='font-size:0.85rem; padding-top:5px;'>{label}</div>", unsafe_allow_html=True)
+                    res_stat = c2.selectbox("", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(val), key=f"s_{key_id}", label_visibility="collapsed")
+                    res_note = c3.text_input("", value=note, key=f"n_{key_id}", label_visibility="collapsed", placeholder="Σχόλιο...")
+                    return {"ID_Κλειδί": key_id, "Έγγραφο": label, "Κατάσταση": res_stat, "Σχόλιο": res_note}
 
-                st.divider()
+                # Εμφάνιση ελέγχων
+                all_results = []
+                st.caption("📌 ΚΕΝΤΡΙΚΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ")
+                all_results.append(render_check_row("Αναγγελία Πρόσληψης (Ε3)", f"PERM_{selected_afm}_{sel_emp_afm}_E3", audit_df))
+                all_results.append(render_check_row("Ταυτότητα Εργαζομένου", f"PERM_{selected_afm}_{sel_emp_afm}_ID", audit_df))
+                
+                st.markdown("<div style='margin:10px 0;'></div>", unsafe_allow_html=True)
+                st.caption(f"📅 ΜΗΝΙΑΙΑ ΠΑΡΑΔΟΤΕΑ ({period})")
+                m_docs = ["Extrait", "Έμβασμα Πληρωμής", "Λογιστικό άρθρο καταχώρησης", "Λογιστικό άρθρο πληρωμής", "Βιβλίο εσόδων-εξόδων"]
+                for md in m_docs:
+                    all_results.append(render_check_row(md, f"MONTH_{selected_afm}_{sel_emp_afm}_{period}_{md}", audit_df))
 
-                # --- Β. ΜΗΝΙΑΙΑ ΠΑΡΑΔΟΤΕΑ ---
-                st.subheader(f"📅 Παραδοτέα Περιόδου: {period}")
-                monthly_docs = ["Extrait", "Έμβασμα Πληρωμής", "Λογιστικό άρθρο καταχώρησης μισθοδοσίας", "Λογιστικό άρθρο πληρωμής μισθοδοσίας", "Βιβλίο εσόδων-εξόδων (Μισθοδοσία)"]
-                month_results = []
-                for m_doc in monthly_docs:
-                    m_key = f"MONTH_{selected_afm}_{sel_emp_afm}_{period}_{m_doc}"
-                    existing_m = audit_df[audit_df['ID_Κλειδί'] == m_key]
-                    m_val = existing_m['Κατάσταση'].iloc[0] if not existing_m.empty else "Έλλειψη ❌"
-                    m_note = existing_m['Σχόλιο'].iloc[0] if not existing_m.empty and pd.notna(existing_m['Σχόλιο'].iloc[0]) else ""
-
-                    mc1, mc2, mc3 = st.columns([1.5, 1, 2], gap="small")
-                    mc1.markdown(f"<div style='margin-top:5px; font-size:0.85rem;'>{m_doc}</div>", unsafe_allow_html=True)
-                    m_status = mc2.selectbox("Status", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(m_val), key=f"m_st_{m_key}", label_visibility="collapsed")
-                    m_comment = mc3.text_input("Παρατήρηση", value=m_note, key=f"m_nt_{m_key}", label_visibility="collapsed")
-                    month_results.append({"ID_Κλειδί": m_key, "Έγγραφο": m_doc, "Κατάσταση": m_status, "Σχόλιο": m_comment})
-
-                if st.button(f"💾 Αποθήκευση Ελέγχου για {emp_data['Ονοματεπώνυμο']}"):
-                    all_new_keys = [r['ID_Κλειδί'] for r in perm_results + month_results]
-                    audit_df = audit_df[~audit_df['ID_Κλειδί'].isin(all_new_keys)]
-                    final_audit_df = pd.concat([audit_df, pd.DataFrame(perm_results), pd.DataFrame(month_results)], ignore_index=True)
-                    save_to_csv(final_audit_df, PAYROLL_CHECKS_FILE)
-                    st.success("✅ Ο έλεγχος αποθηκεύτηκε!")
+                # Κουμπιά στο τέλος
+                st.write("")
+                b1, b2, _ = st.columns([1, 1, 2])
+                if b1.button("💾 Αποθήκευση Ελέγχου", use_container_width=True):
+                    new_keys = [r['ID_Κλειδί'] for r in all_results]
+                    audit_df = audit_df[~audit_df['ID_Κλειδί'].isin(new_keys)]
+                    save_to_csv(pd.concat([audit_df, pd.DataFrame(all_results)], ignore_index=True), PAYROLL_CHECKS_FILE)
+                    st.toast("Αποθηκεύτηκε!")
+                
+                if b2.button("🗑️ Διαγραφή Υπαλλήλου", use_container_width=True):
+                    all_emps_df = all_emps_df[~((all_emps_df['ΑΦΜ_Εργου'].astype(str) == selected_afm) & (all_emps_df['ΑΦΜ_Υπαλλήλου'].astype(str) == sel_emp_afm))]
+                    save_to_csv(all_emps_df, EMPLOYEES_FILE)
                     st.rerun()
-
-                with st.expander("⚙️ Επιλογές Διαγραφής"):
-                    if st.button(f"🗑️ Οριστική Διαγραφή Υπαλλήλου"):
-                        all_emps_df = all_emps_df[~((all_emps_df['ΑΦΜ_Εργου'].astype(str) == selected_afm) & (all_emps_df['ΑΦΜ_Υπαλλήλου'].astype(str) == sel_emp_afm))]
-                        save_to_csv(all_emps_df, EMPLOYEES_FILE)
-                        st.rerun()
