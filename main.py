@@ -74,22 +74,59 @@ elif page == "2. Checklist ανά Έργο":
         sel_afm = str(projects_df[projects_df['Επωνυμία'] == sel_name]['ΑΦΜ'].iloc[0])
         check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
         
-        docs = ["Πίνακας Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", "Αποδεικτικό ΑΠΔ", "ΑΠΔ ΤΕΚΑ", "Ασφαλιστική ενημερότητα", "Φορολογική ενημερότητα", "Προσωρινές ΦΜΥ"]
+        # Η πλήρης λίστα με όλα τα παραδοτέα που ζήτησες
+        docs = [
+            "Πίνακας Προσωπικού Ε4 (Ετήσιος/Συμπληρωματικός)",
+            "Μισθολογικές καταστάσεις (υπογεγραμμένες)",
+            "ΑΠΔ ΕΦΚΑ (Κοινή)",
+            "Αποδεικτικό Υποβολής ΑΠΔ ΕΦΚΑ",
+            "ΑΠΔ ΤΕΚΑ",
+            "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ",
+            "Υπεύθυνη δήλωση μη απασχόλησης συγγενών",
+            "Επιστολή γνωστοποίησης όρων σύμβασης",
+            "Ασφαλιστική ενημερότητα (σε ισχύ)",
+            "Οικονομική καρτέλα εργοδότη ΕΦΚΑ",
+            "Ηλεκτρονική καρτέλα οφειλετών (ΚΕΑΟ)",
+            "Πίνακας χρεών οφειλέτη",
+            "Ανάλυση κίνησης Ηλ. Καρτέλας",
+            "Φορολογική ενημερότητα (για είσπραξη χρημάτων)",
+            "Στοιχεία ρυθμίσεων & Αποδεικτικά Πληρωμής",
+            "Προσωρινές δηλώσεις ΦΜΥ & Αποδεικτικά"
+        ]
+        
         results = []
         
+        # Εμφάνιση της λίστας
         for d in docs:
             existing = check_df[(check_df['ΑΦΜ'].astype(str) == sel_afm) & (check_df['Εγγραφο'] == d)]
-            c1, c2, c3 = st.columns([1.5, 1, 2])
+            c1, c2, c3 = st.columns([2, 1, 1.5])
+            
             c1.markdown(f"**{d}**")
+            
             curr_st = existing['Κατάσταση'].iloc[0] if not existing.empty else "Έλλειψη ❌"
-            status = c2.selectbox("Κατάσταση", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(curr_st), key=f"s_{sel_afm}_{d}", label_visibility="collapsed")
-            note = c3.text_input("Σχόλιο", value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", key=f"n_{sel_afm}_{d}", label_visibility="collapsed", placeholder="Σχόλιο...")
+            status = c2.selectbox(
+                "Κατάσταση", 
+                ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], 
+                index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(curr_st), 
+                key=f"s_{sel_afm}_{d}", 
+                label_visibility="collapsed"
+            )
+            
+            note = c3.text_input(
+                "Σχόλιο", 
+                value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", 
+                key=f"n_{sel_afm}_{d}", 
+                label_visibility="collapsed", 
+                placeholder="Σημειώσεις..."
+            )
+            
             results.append({"ΑΦΜ": sel_afm, "Εγγραφο": d, "Κατάσταση": status, "Σχόλιο": note})
         
+        st.divider()
         if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
             others = check_df[check_df['ΑΦΜ'].astype(str) != sel_afm]
             save_to_csv(pd.concat([others, pd.DataFrame(results)], ignore_index=True), CHECKLIST_FILE)
-            st.success("Ενημερώθηκε!")
+            st.success(f"✅ Το checklist για την επιχείρηση {sel_name} ενημερώθηκε!")
 
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
