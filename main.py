@@ -39,8 +39,23 @@ CHECKLIST_FILE = 'checklist_results.csv'
 PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 
 def load_data(f, cols):
-    if not os.path.isfile(f) or os.path.getsize(f) == 0: return pd.DataFrame(columns=cols)
-    return pd.read_csv(f)
+    # 1. Έλεγχος αν το αρχείο υπάρχει
+    if not os.path.isfile(f):
+        return pd.DataFrame(columns=cols)
+    
+    # 2. Έλεγχος αν το αρχείο είναι άδειο (0 bytes)
+    if os.path.getsize(f) == 0:
+        return pd.DataFrame(columns=cols)
+        
+    try:
+        df = pd.read_csv(f)
+        # 3. Έλεγχος αν το αρχείο είχε δεδομένα αλλά ήταν κατεστραμμένο ή κενό μετά το διάβασμα
+        if df.empty and len(df.columns) == 0:
+            return pd.DataFrame(columns=cols)
+        return df
+    except (pd.errors.EmptyDataError, pd.errors.ParserError):
+        # Αν συμβεί το σφάλμα, επέστρεψε άδειο DataFrame με τις στήλες
+        return pd.DataFrame(columns=cols)
 
 def save_to_csv(df, f):
     df.to_csv(f, index=False, encoding='utf-8-sig')
