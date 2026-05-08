@@ -60,7 +60,25 @@ if page == "1. Διαχείριση Έργων":
                     save_to_csv(df, PROJECTS_FILE)
                     st.success("✅ Το έργο αποθηκεύτηκε!")
                     st.rerun()
-
+# --- ΣΤΑΔΙΟ 1 (Συνέχεια) ---
+        st.markdown("### 📋 Λίστα Εγγεγραμμένων Επιχειρήσεων")
+        df_display = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"])
+        
+        if not df_display.empty:
+            # Διαμόρφωση για πιο όμορφη εμφάνιση του Προϋπολογισμού
+            df_display['Προϋπολογισμός'] = df_display['Προϋπολογισμός'].apply(lambda x: f"{x:,.2f} €")
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
+            
+            # Επιλογή για Διαγραφή
+            with st.expander("🗑️ Διαγραφή Επιχείρησης"):
+                delete_afm = st.selectbox("Επιλέξτε ΑΦΜ για διαγραφή:", df_display['ΑΦΜ'].unique())
+                if st.button("Οριστική Διαγραφή", type="primary"):
+                    df_display = df_display[df_display['ΑΦΜ'].astype(str) != str(delete_afm)]
+                    save_to_csv(df_display, PROJECTS_FILE)
+                    st.success("Η επιχείρηση διαγράφηκε.")
+                    st.rerun()
+        else:
+            st.info("Δεν υπάρχουν καταχωρημένες επιχειρήσεις ακόμα.")
 # --- ΣΤΑΔΙΟ 2: CHECKLIST ΑΝΑ ΕΡΓΟ ---
 elif page == "2. Checklist ανά Έργο":
     st.header("📂 Γενικά Παραδοτέα Μισθοδοσίας")
