@@ -6,16 +6,10 @@ from PIL import Image
 import json
 
 # --- 1. ΡΥΘΜΙΣΗ AI (GEMINI) ---
-# Αντικατάστησε με το κλειδί σου από το Google AI Studio
 GOOGLE_API_KEY = "AIzaSyB_NjdNwQrRHeFzfphVPz8qIfTzgEQ-zSg" 
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# --- 2. ΔΗΜΙΟΥΡΓΙΑ ΦΑΚΕΛΩΝ ---
-for folder in ["uploaded_docs", "uploaded_payroll"]:
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-
-# --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΕΔΟΜΕΝΩΝ ---
+# --- 2. ΣΥΝΑΡΤΗΣΕΙΣ ΔΕΔΟΜΕΝΩΝ ---
 PROJECTS_FILE = 'data_projects.csv'
 EMPLOYEES_FILE = 'data_employees.csv'
 FINANCIALS_FILE = 'payroll_financials.csv'
@@ -48,9 +42,8 @@ def extract_payroll_with_ai(uploaded_file):
         st.error(f"Σφάλμα AI: {e}")
         return None
 
-# --- 4. ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ ---
-st.set_page_config(page_title="Payroll AI Verifier Pro", layout="wide")
-st.sidebar.title("📑 Σύστημα Ελέγχου")
+# --- 3. ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ ---
+st.set_page_config(page_title="Payroll AI Verifier", layout="wide")
 page = st.sidebar.radio("Μενού:", ["1. Διαχείριση Έργων", "2. Checklist ανά Έργο", "3. Μισθοδοσία Υπαλλήλων"])
 
 # --- ΣΤΑΔΙΟ 1: ΔΙΑΧΕΙΡΙΣΗ ΕΡΓΩΝ ---
@@ -86,16 +79,12 @@ elif page == "2. Checklist ανά Έργο":
         
         for d in docs:
             existing = check_df[(check_df['ΑΦΜ'].astype(str) == sel_afm) & (check_df['Εγγραφο'] == d)]
-            with st.expander(f"📄 {d}"):
-                c1, c2 = st.columns([1, 1])
-                curr_st = existing['Κατάσταση'].iloc[0] if not existing.empty else "Έλλειψη ❌"
-                status = c1.selectbox("Κατάσταση", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(curr_st), key=f"s_{sel_afm}_{d}")
-                up = c2.file_uploader("Ανέβασμα", key=f"u_{sel_afm}_{d}")
-                if up:
-                    with open(os.path.join("uploaded_docs", f"{sel_afm}_{d}_{up.name}"), "wb") as f:
-                        f.write(up.getbuffer())
-                note = st.text_input("Σχόλιο", value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", key=f"n_{sel_afm}_{d}")
-                results.append({"ΑΦΜ": sel_afm, "Εγγραφο": d, "Κατάσταση": status, "Σχόλιο": note})
+            c1, c2, c3 = st.columns([1.5, 1, 2])
+            c1.markdown(f"**{d}**")
+            curr_st = existing['Κατάσταση'].iloc[0] if not existing.empty else "Έλλειψη ❌"
+            status = c2.selectbox("Κατάσταση", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(curr_st), key=f"s_{sel_afm}_{d}", label_visibility="collapsed")
+            note = c3.text_input("Σχόλιο", value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", key=f"n_{sel_afm}_{d}", label_visibility="collapsed", placeholder="Σχόλιο...")
+            results.append({"ΑΦΜ": sel_afm, "Εγγραφο": d, "Κατάσταση": status, "Σχόλιο": note})
         
         if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
             others = check_df[check_df['ΑΦΜ'].astype(str) != sel_afm]
@@ -104,7 +93,7 @@ elif page == "2. Checklist ανά Έργο":
 
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Έλεγχος Υπαλλήλων & AI OCR")
+    st.header("👤 Έλεγχος Υπαλλήλων")
     projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
     if projects_df.empty:
         st.warning("⚠️ Προσθέστε επιχείρηση στο Στάδιο 1.")
@@ -119,44 +108,16 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
             period = f"{month} {year}"
         
         with col_r:
-            with st.expander("➕ Προσθήκη Νέου Υπαλλήλου"):
-                e_name = st.text_input("Ονοματεπώνυμο")
-                e_afm = st.text_input("ΑΦΜ Υπαλλήλου", max_chars=9)
-                if st.button("Καταχώρηση"):
-                    edf = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου"])
-                    save_to_csv(pd.concat([edf, pd.DataFrame([{"ΑΦΜ_Εργου": s_afm, "Ονοματεπώνυμο": e_name, "ΑΦΜ_Υπαλλήλου": e_afm}])], ignore_index=True), EMPLOYEES_FILE)
-                    st.rerun()
+            st.subheader("➕ Προσθήκη Υπαλλήλου")
+            e_name = st.text_input("Ονοματεπώνυμο")
+            c_a, c_m = st.columns(2)
+            e_afm = c_a.text_input("ΑΦΜ", max_chars=9)
+            e_amka = c_m.text_input("ΑΜΚΑ", max_chars=11)
+            if st.button("Καταχώρηση Υπαλλήλου"):
+                edf = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
+                save_to_csv(pd.concat([edf, pd.DataFrame([{"ΑΦΜ_Εργου": s_afm, "Ονοματεπώνυμο": e_name, "ΑΦΜ_Υπαλλήλου": e_afm, "ΑΜΚΑ_Υπαλλήλου": e_amka}])], ignore_index=True), EMPLOYEES_FILE)
+                st.rerun()
 
         st.divider()
-        all_e = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου"])
-        c_emps = all_e[all_e['ΑΦΜ_Εργου'].astype(str) == s_afm]
-        e_list = c_emps.apply(lambda x: f"{x['Ονοματεπώνυμο']} (ΑΦΜ: {x['ΑΦΜ_Υπαλλήλου']})", axis=1).tolist()
-
-        if e_list:
-            sel_e = st.selectbox("🔍 Επιλέξτε Υπάλληλο:", ["---"] + e_list)
-            if sel_e != "---":
-                e_afm_val = sel_e.split("(ΑΦΜ: ")[1].replace(")", "")
-                f_key = f"FIN_{s_afm}_{e_afm_val}_{period}"
-                
-                up_pay = st.file_uploader("📂 Ανέβασμα Μισθοδοτικής (AI Ανάλυση)", type=['png', 'jpg', 'pdf'])
-                ocr_data = {}
-                if up_pay:
-                    with open(os.path.join("uploaded_payroll", f"{f_key}_{up_pay.name}"), "wb") as f:
-                        f.write(up_pay.getbuffer())
-                    with st.spinner("🤖 Το AI διαβάζει τα ποσά..."):
-                        ocr_data = extract_payroll_with_ai(up_pay)
-
-                f_df = load_data(FINANCIALS_FILE, ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Σύνολο_Αποδ", "ΟΠΣΚΕ"])
-                ext = f_df[f_df['ID_Κλειδί'] == f_key]
-                def get_v(k): return float(ext[k].iloc[0]) if not ext.empty else ocr_data.get(k, 0.0)
-
-                c1, c2 = st.columns(2); v1 = c1.number_input("ΙΚΑ Εργαζ.", value=get_v("ΙΚΑ_Εργ")); v2 = c2.number_input("ΙΚΑ Εργοδ.", value=get_v("ΙΚΑ_Εργοδ"))
-                c3, c4 = st.columns(2); v3 = c3.number_input("ΤΕΚΑ Εργαζ.", value=get_v("ΤΕΚΑ_Εργ")); v4 = c4.number_input("ΤΕΚΑ Εργοδ.", value=get_v("ΤΕΚΑ_Εργοδ"))
-                c5, c6, c7 = st.columns(3); v5 = c5.number_input("Σύν. Εισφορών", value=get_v("Σύνολο_Εισφ")); v6 = c6.number_input("ΦΜΥ", value=get_v("ΦΜΥ")); v7 = c7.number_input("Καθαρές Αποδ.", value=get_v("Καθαρές"))
-                c8, c9 = st.columns(2); v8 = c8.number_input("Σύνολο Αποδοχών", value=get_v("Σύνολο_Αποδ")); v9 = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=get_v("ΟΠΣΚΕ"))
-                
-                if st.button("💾 Αποθήκευση Οικονομικών", use_container_width=True):
-                    row = {"ID_Κλειδί": f_key, "ΙΚΑ_Εργ": v1, "ΙΚΑ_Εργοδ": v2, "ΤΕΚΑ_Εργ": v3, "ΤΕΚΑ_Εργοδ": v4, "Σύνολο_Εισφ": v5, "ΦΜΥ": v6, "Καθαρές": v7, "Σύνολο_Αποδ": v8, "ΟΠΣΚΕ": v9}
-                    f_df = pd.concat([f_df[f_df['ID_Κλειδί'] != f_key], pd.DataFrame([row])], ignore_index=True)
-                    save_to_csv(f_df, FINANCIALS_FILE)
-                    st.success("Αποθηκεύτηκε!")
+        all_e = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
+        c_emps = all_e[all_e['
