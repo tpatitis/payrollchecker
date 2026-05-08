@@ -1,4 +1,4 @@
 streamlit
 pandas
-openpyxl
-# easyocr
+google-generativeai
+Pillow
