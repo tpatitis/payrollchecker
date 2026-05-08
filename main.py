@@ -81,9 +81,75 @@ if page == "1. Διαχείριση Έργων":
     st.dataframe(load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"]), use_container_width=True)
 
 # --- ΣΤΑΔΙΟ 2 ---
+# --- ΣΤΑΔΙΟ 2: CHECKLIST ΑΝΑ ΕΡΓΟ ---
 elif page == "2. Checklist ανά Έργο":
-    st.header("📂 Γενικά Παραδοτέα")
-    # [Ο κώδικας του σταδίου 2 παραμένει ίδιος]
+    st.header("📂 Γενικά Παραδοτέα Μισθοδοσίας")
+    projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
+    
+    if projects_df.empty:
+        st.warning("⚠️ Καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
+    else:
+        # Επιλογή Επιχείρησης
+        selected_name = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'])
+        selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_name]['ΑΦΜ'].iloc[0])
+        
+        # Φόρτωση υπαρχόντων αποτελεσμάτων
+        check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
+        
+        # Η λίστα με τα έγγραφα που θέλουμε να ελέγχουμε
+        required_docs = [
+            "Πίνακας Προσωπικού Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", 
+            "Αποδεικτικό Υποβολής ΑΠΔ", "ΑΠΔ ΤΕΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ", 
+            "Υπεύθυνη δήλωση συγγενών", "Επιστολή γνωστοποίησης", "Ασφαλιστική ενημερότητα", 
+            "Οικονομική καρτέλα ΕΦΚΑ", "Ηλεκτρονική καρτέλα οφειλετών", "Πίνακας χρεών οφειλέτη", 
+            "Ανάλυση κίνησης Ηλ. Καρτέλας", "Φορολογική ενημερότητα", "Στοιχεία ρυθμίσεων & Πληρωμή", 
+            "Προσωρινές δηλώσεις ΦΜΥ"
+        ]
+        
+        results = []
+        st.markdown("---")
+        
+        # Δημιουργία γραμμών για κάθε έγγραφο
+        for doc in required_docs:
+            # Αναζήτηση αν υπάρχει ήδη αποθηκευμένη τιμή για αυτό το ΑΦΜ και αυτό το έγγραφο
+            existing = check_df[(check_df['ΑΦΜ'].astype(str) == selected_afm) & (check_df['Εγγραφο'] == doc)]
+            
+            c1, c2, c3 = st.columns([1.5, 1, 2], gap="small")
+            
+            with c1:
+                st.markdown(f"<div style='padding-top:10px;'><b>{doc}</b></div>", unsafe_allow_html=True)
+            
+            with c2:
+                # Καθορισμός default επιλογής αν υπάρχει στη βάση
+                current_status = existing['Κατάσταση'].iloc[0] if not existing.empty else "Έλλειψη ❌"
+                status_options = ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"]
+                status = st.selectbox(
+                    "Κατάσταση", 
+                    status_options, 
+                    index=status_options.index(current_status),
+                    key=f"status_{selected_afm}_{doc}",
+                    label_visibility="collapsed"
+                )
+            
+            with c3:
+                current_comment = existing['Σχόλιο'].iloc[0] if not existing.empty else ""
+                note = st.text_input(
+                    "Σχόλιο", 
+                    value=current_comment, 
+                    key=f"note_{selected_afm}_{doc}", 
+                    label_visibility="collapsed",
+                    placeholder="Προσθέστε σχόλιο..."
+                )
+            
+            results.append({"ΑΦΜ": selected_afm, "Εγγραφο": doc, "Κατάσταση": status, "Σχόλιο": note})
+
+        st.markdown("---")
+        if st.button("💾 Αποθήκευση Checklist Επιχείρησης", use_container_width=True):
+            # Αφαιρούμε τις παλιές εγγραφές για τη συγκεκριμένη επιχείρηση και προσθέτουμε τις νέες
+            other_projects = check_df[check_df['ΑΦΜ'].astype(str) != selected_afm]
+            final_df = pd.concat([other_projects, pd.DataFrame(results)], ignore_index=True)
+            save_to_csv(final_df, CHECKLIST_FILE)
+            st.success(f"✅ Το checklist για την επιχείρηση {selected_name} ενημερώθηκε!")
 
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΜΕ AI ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
