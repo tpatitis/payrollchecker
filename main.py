@@ -120,4 +120,38 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
 
         st.divider()
         all_e = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
-        c_emps = all_e[all_e['
+        c_emps = all_e[all_e['ΑΦΜ_Εργου'].astype(str) == s_afm]
+        e_list = c_emps.apply(lambda x: f"{x['Ονοματεπώνυμο']} (ΑΦΜ: {x['ΑΦΜ_Υπαλλήλου']})", axis=1).tolist()
+
+        if e_list:
+            sel_e = st.selectbox("🔍 Επιλέξτε Υπάλληλο:", ["---"] + e_list)
+            if sel_e != "---":
+                e_afm_val = sel_e.split("(ΑΦΜ: ")[1].replace(")", "")
+                emp_data = c_emps[c_emps['ΑΦΜ_Υπαλλήλου'].astype(str) == e_afm_val].iloc[0]
+                f_key = f"FIN_{s_afm}_{e_afm_val}_{period}"
+                
+                st.write(f"📌 **ΑΜΚΑ Υπαλλήλου:** {emp_data['ΑΜΚΑ_Υπαλλήλου']}")
+                
+                up_pay = st.file_uploader("📂 Ανέβασμα Μισθοδοτικής (AI Ανάλυση)", type=['png', 'jpg', 'pdf'])
+                ocr_data = {}
+                if up_pay:
+                    with st.spinner("🤖 Το AI διαβάζει τα ποσά..."):
+                        ocr_data = extract_payroll_with_ai(up_pay)
+
+                f_df = load_data(FINANCIALS_FILE, ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Σύνολο_Αποδ", "ΟΠΣΚΕ"])
+                ext = f_df[f_df['ID_Κλειδί'] == f_key]
+                def get_v(k): return float(ext[k].iloc[0]) if not ext.empty else ocr_data.get(k, 0.0)
+
+                c1, c2 = st.columns(2); v1 = c1.number_input("ΙΚΑ Εργαζ.", value=get_v("ΙΚΑ_Εργ")); v2 = c2.number_input("ΙΚΑ Εργοδ.", value=get_v("ΙΚΑ_Εργοδ"))
+                c3, c4 = st.columns(2); v3 = c3.number_input("ΤΕΚΑ Εργαζ.", value=get_v("ΤΕΚΑ_Εργ")); v4 = c4.number_input("ΤΕΚΑ Εργοδ.", value=get_v("ΤΕΚΑ_Εργοδ"))
+                c5, c6, c7 = st.columns(3); v5 = c5.number_input("Σύν. Εισφορών", value=get_v("Σύνολο_Εισφ")); v6 = c6.number_input("ΦΜΥ", value=get_v("ΦΜΥ")); v7 = c7.number_input("Καθαρές Αποδ.", value=get_v("Καθαρές"))
+                c8, c9, c10 = st.columns(3); v8 = c8.number_input("Σύνολο Αποδοχών", value=get_v("Σύνολο_Αποδ")); v9 = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=get_v("ΟΠΣΚΕ"))
+                
+                calc = v7 + v5 + v6
+                c10.metric("Έλεγχος", f"{calc:,.2f} €")
+                
+                if st.button("💾 Αποθήκευση Οικονομικών", use_container_width=True):
+                    row = {"ID_Κλειδί": f_key, "ΙΚΑ_Εργ": v1, "ΙΚΑ_Εργοδ": v2, "ΤΕΚΑ_Εργ": v3, "ΤΕΚΑ_Εργοδ": v4, "Σύνολο_Εισφ": v5, "ΦΜΥ": v6, "Καθαρές": v7, "Σύνολο_Αποδ": v8, "ΟΠΣΚΕ": v9}
+                    f_df = pd.concat([f_df[f_df['ID_Κλειδί'] != f_key], pd.DataFrame([row])], ignore_index=True)
+                    save_to_csv(f_df, FINANCIALS_FILE)
+                    st.success("Αποθηκεύτηκε!")
