@@ -7,7 +7,7 @@ import json
 
 # --- 1. ΡΥΘΜΙΣΗ AI (GEMINI) ---
 # Αντικατάστησε το κλειδί παρακάτω με το δικό σου
-GOOGLE_API_KEY = "ΤΟ_API_KEY_ΣΟΥ_ΕΔΩ" 
+GOOGLE_API_KEY = "AIzaSyB_NjdNwQrRHeFzfphVPz8qIfTzgEQ-zSg" 
 genai.configure(api_key=GOOGLE_API_KEY)
 
 def extract_payroll_with_ai(uploaded_file):
