@@ -42,9 +42,8 @@ def save_to_csv(df, filename):
     df.to_csv(filename, index=False, encoding='utf-8-sig')
 
 
-```python
 # ========================= AI SCHEMA =========================
-```python
+
 class PayrollFinancials(BaseModel):
 
     ΙΚΑ_Εργ: float = Field(
@@ -600,4 +599,4 @@ else:
             period,
             selected_afm
         )
-```
+
