@@ -199,9 +199,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # Αυτόματος υπολογισμός συνόλου μικτών (χωρίς υπερωρίες/bonus)
     v_total_ap = v_tak_ap + v_doro_pasxa + v_doro_xrist + v_epidoma_ad
     
-    # Αυτόματος υπολογισμός συνόλου μικτών
-    v_total_ap = v_tak_ap + v_yp_ap + v_doro_pasxa + v_doro_xrist + v_epidoma_ad + v_loip_ap
-    
+       
     st.markdown("<br>", unsafe_allow_html=True)
     c8, c9, c10 = st.columns(3)
     c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_total_ap, format="%.2f", disabled=True, help="Υπολογίζεται αυτόματα από το άθροισμα όλων των Tabs.")
