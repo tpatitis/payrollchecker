@@ -142,7 +142,8 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
         with col_l:
             st.subheader("⚙️ Φίλτρα Αναζήτησης")
             sel_p = st.selectbox("Επιχείρηση:", projects_df['Επωνυμία'])
-            s_afm = str(projects_df[projects_df['Επωνυμία'] == sel_p]['ΑΦΜ'].iloc[0])
+            # Μετατροπή σε καθαρό String χωρίς κενά
+            s_afm = str(projects_df[projects_df['Επωνυμία'] == sel_p]['ΑΦΜ'].iloc[0]).strip()
             
             m_c, y_c = st.columns(2)
             month = m_c.selectbox("Μήνας:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
@@ -164,21 +165,27 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                         st.error("⚠️ Το Ονοματεπώνυμο και το ΑΦΜ είναι υποχρεωτικά!")
                     else:
                         edf = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
+                        
+                        # Σιγουρεύουμε ότι αποθηκεύεται ως καθαρό String χωρίς κενά
                         new_emp = pd.DataFrame([{
-                            "ΑΦΜ_Εργου": s_afm, 
-                            "Ονοματεπώνυμο": e_name, 
-                            "ΑΦΜ_Υπαλλήλου": e_afm, 
-                            "ΑΜΚΑ_Υπαλλήλου": e_amka
+                            "ΑΦΜ_Εργου": str(s_afm).strip(), 
+                            "Ονοματεπώνυμο": str(e_name).strip(), 
+                            "ΑΦΜ_Υπαλλήλου": str(e_afm).strip(), 
+                            "ΑΜΚΑ_Υπαλλήλου": str(e_amka).strip()
                         }])
+                        
                         save_to_csv(pd.concat([edf, new_emp], ignore_index=True), EMPLOYEES_FILE)
                         st.success(f"✅ Ο υπάλληλος {e_name} καταχωρήθηκε!")
                         st.rerun()
 
         st.divider()
         
-        # Φόρτωση και φιλτράρισμα υπαλλήλων για τη συγκεκριμένη επιχείρηση
+        # Φόρτωση και αυστηρή μετατροπή στηλών σε String για σωστό φιλτράρισμα
         all_e = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
-        c_emps = all_e[all_e['ΑΦΜ_Εργου'].astype(str) == s_afm]
+        all_e['ΑΦΜ_Εργου'] = all_e['ΑΦΜ_Εργου'].astype(str).str.strip()
+        
+        # Φιλτράρισμα με βάση το ΑΦΜ της επιλεγμένης επιχείρησης
+        c_emps = all_e[all_e['ΑΦΜ_Εργου'] == s_afm]
         e_list = c_emps.apply(lambda x: f"{x['Ονοματεπώνυμο']} (ΑΦΜ: {x['ΑΦΜ_Υπαλλήλου']})", axis=1).tolist()
 
         if not e_list:
@@ -187,8 +194,8 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
             sel_e = st.selectbox("🔍 Επιλέξτε Υπάλληλο για Έλεγχο:", ["---"] + e_list)
             
             if sel_e != "---":
-                e_afm_val = sel_e.split("(ΑΦΜ: ")[1].replace(")", "")
-                emp_data = c_emps[c_emps['ΑΦΜ_Υπαλλήλου'].astype(str) == e_afm_val].iloc[0]
+                e_afm_val = sel_e.split("(ΑΦΜ: ")[1].replace(")", "").strip()
+                emp_data = c_emps[c_emps['ΑΦΜ_Υπαλλήλου'].astype(str).str.strip() == e_afm_val].iloc[0]
                 f_key = f"FIN_{s_afm}_{e_afm_val}_{period}"
                 
                 # Εμφάνιση ΑΜΚΑ υπαλλήλου στην οθόνη
@@ -239,7 +246,6 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                         "ΤΕΚΑ_Εργ": v3, "ΤΕΚΑ_Εργοδ": v4, "Σύνολο_Εισφ": v5, 
                         "ΦΜΥ": v6, "Καθαρές": v7, "Σύνολο_Αποδ": v8, "ΟΠΣΚΕ": v9
                     }
-                    # Αντικατάσταση αν προϋπάρχει η εγγραφή, αλλιώς προσθήκη
                     f_df = pd.concat([f_df[f_df['ID_Κλειδί'] != f_key], pd.DataFrame([row])], ignore_index=True)
                     save_to_csv(f_df, FINANCIALS_FILE)
                     st.toast("✅ Τα οικονομικά στοιχεία αποθηκεύτηκαν!")
