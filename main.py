@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
 import os
+import json
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, Field
 
 # --- 1. ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ ---
 st.set_page_config(
@@ -15,7 +19,24 @@ CHECKLIST_FILE = 'checklist_results.csv'
 EMPLOYEES_FILE = 'data_employees.csv'
 FINANCIALS_FILE = 'payroll_financials.csv'
 
-# --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
+# --- 3. PYDANTIC SCHEMA ΓΙΑ STRUCTURED OUTPUT ΑΠΟ ΤΟ AI ---
+class PayrollData(BaseModel):
+    Περίοδος_Εγγράφου: str = Field(description="Ο μήνας και το έτος της απόδειξης μισθοδοσίας, π.χ. ΜΑΪΟΣ 2026")
+    Τακτικές_Αποδοχές: float = Field(description="Μικτές τακτικές αποδοχές / βασικός μισθός")
+    Δώρο_Πάσχα: float = Field(description="Ποσό για Δώρο Πάσχα, αν δεν υπάρχει βάλε 0")
+    Δώρο_Χριστουγέννων: float = Field(description="Ποσό για Δώρο Χριστουγέννων, αν δεν υπάρχει βάλε 0")
+    Επίδομα_Άδειας: float = Field(description="Ποσό για Επίδομα Άδειας, αν δεν υπάρχει βάλε 0")
+    Σύνολο_Αποδ: float = Field(description="Συνολικές μικτές αποδοχές (άθροισμα όλων των αποδοχών)")
+    ΙΚΑ_Εργ: float = Field(description="Ασφαλιστικές εισφορές εργαζομένου (κράτηση υπαλλήλου)")
+    ΙΚΑ_Εργοδ: float = Field(description="Ασφαλιστικές εισφορές εργοδότη")
+    ΤΕΚΑ_Εργ: float = Field(description="Εισφορές εργαζομένου ΤΕΚΑ, αν δεν υπάρχει βάλε 0")
+    ΤΕΚΑ_Εργοδ: float = Field(description="Εισφορές εργοδότη ΤΕΚΑ, αν δεν υπάρχει βάλε 0")
+    Σύνολο_Εισφ: float = Field(description="Συνολικό ποσό εισφορών (κρατήσεων)")
+    ΦΜΥ: float = Field(description="Φόρος Μισθωτών Υπηρεσιών (Φ.Μ.Υ.), αν δεν υπάρχει βάλε 0")
+    Καθαρές: float = Field(description="Καθαρό πληρωτέο ποσό στον εργαζόμενο")
+    ΟΠΣΚΕ: float = Field(description="Το αιτούμενο ποσό για το ΟΠΣΚΕ (συνήθως ταυτίζεται με το Σύνολο Μικτών)")
+
+# --- 4. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
 def load_data(filename, columns):
     if not os.path.isfile(filename) or os.path.getsize(filename) == 0:
         return pd.DataFrame(columns=columns)
@@ -115,6 +136,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
                     st.session_state[trigger_key] = ocr_data
                     for k, v in ocr_data.items():
                         st.session_state[f"val_{fin_key}_{k}"] = v
+                    st.success("✅ Η ανάλυση ολοκληρώθηκε! Τα πεδία συμπληρώθηκαν αυτόματα.")
                     st.rerun()
     
     # 5. Έλεγχος Μήνα (Validation)
@@ -381,6 +403,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
     # 2. Φόρμα Διαγραφής Υπαλλήλου στο Sidebar
     if not emp_df.empty:
         with st.sidebar.expander("🗑️ Διαγραφή Υπαλλήλου"):
+            # ΔΙΟΡΘΩΘΗΚΕ ΤΟ TYPO: row['ΑΜΚΑ'] αντί για row['AMKA']
             delete_options = {
                 f"{row['Ονοματεπώνυμο']} (ΑΜΚΑ: {row['ΑΜΚΑ']})": row['ID']
                 for _, row in emp_df.iterrows() if pd.notna(row['ΑΜΚΑ'])
