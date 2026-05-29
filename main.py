@@ -167,7 +167,6 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
         Καθαρές: float = pydantic.Field(description="Το τελικό ποσό που μπαίνει στην τράπεζα στον υπάλληλο. Αναγράφεται ως 'Πληρωτέο', 'Καθαρό Πληρωτέο' ή 'Καθαρές Αποδοχές'.")
         Σύνολο_Αποδ: float = pydantic.Field(description="Οι μικτές αποδοχές του υπαλλήλου πριν αφαιρεθούν οι κρατήσεις και ο φόρος. Αναγράφεται ως 'Μικτά', 'Σύνολο Αποδοχών' ή 'Τακτικές Αποδοχές'.")
 
-    # ΠΕΡΝΑΜΕ ΤΟ emp_name ΩΣ ΟΡΙΣΜΑ ΓΙΑ ΤΑΥΤΟΠΟΙΗΣΗ
     def extract_financials_with_ai(uploaded_file, emp_name):
         """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
         
@@ -308,7 +307,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 st.subheader("💰 Οικονομικά Στοιχεία")
                 
                 # Uploader Αρχείου (Δέχεται εικόνες και PDF)
-                uploaded_file = st.file_uploader("📂 Μεταφορτώστε τη Μισθοδοτική (AI OCR)", type=['png', 'jpg', 'jpeg', 'pdf'], key=f"up_{fin_key}")
+                uploaded_file = st.file_uploader("📂 Μεταφορτώστε τη Μισθοδοτική", type=['png', 'jpg', 'jpeg', 'pdf'], key=f"up_{fin_key}")
                 
                 # Φόρτωση υπαρχόντων δεδομένων από το CSV
                 fin_df = load_data(FINANCIALS_FILE, ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Σύνολο_Αποδ", "ΟΠΣΚΕ"])
@@ -317,21 +316,23 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 # Δημιουργία dictionary για τις default τιμές
                 default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_df.columns if k != "ID_Κλειδί"}
                 
-                # ΕΛΕΓΧΟΣ ΜΕ FINGERPRINT ΑΡΧΕΙΟΥ ΓΙΑ ΑΠΟΦΥΓΗ ΛΑΘΟΣ CACHE
+                # Μηχανισμός ελέγχου με κουμπί χειροκίνητης έναρξης
                 if uploaded_file is not None:
+                    # Μοναδικό κλειδί μνήμης ανά αρχείο ΚΑΙ ανά υπάλληλο
                     file_fingerprint = f"{uploaded_file.name}_{uploaded_file.size}"
-                    ocr_cache_key = f"ocr_res_{fin_key}_{file_fingerprint}"
+                    trigger_key = f"ocr_data_{fin_key}_{file_fingerprint}"
                     
-                    if ocr_cache_key not in st.session_state:
+                    # Εμφάνιση του κουμπιού ανάλυσης
+                    if st.button("🤖 Έναρξη Ανάλυσης AI", type="primary", use_container_width=True):
                         with st.spinner("⏳ Το AI μελετά το έγγραφο μισθοδοσίας..."):
-                            # ΚΑΛΟΥΜΕ ΤΟ AI ΠΕΡΝΩΝΤΑΣ ΚΑΙ ΤΟ ΟΝΟΜΑ ΤΟΥ ΥΠΑΛΛΗΛΟΥ
                             ocr_data = extract_financials_with_ai(uploaded_file, emp_data['Ονοματεπώνυμο'])
                             if ocr_data:
-                                st.session_state[ocr_cache_key] = ocr_data
+                                st.session_state[trigger_key] = ocr_data
+                                st.success("🎯 Η ανάλυση ολοκληρώθηκε!")
                     
-                    if ocr_cache_key in st.session_state:
-                        st.info(f"🤖 Το AI ανέλυσε επιτυχώς το αρχείο: {uploaded_file.name}")
-                        for k, v in st.session_state[ocr_cache_key].items():
+                    # Αν υπάρχουν φρέσκα δεδομένα στη μνήμη του συγκεκριμένου trigger_key, τα εφαρμόζουμε
+                    if trigger_key in st.session_state:
+                        for k, v in st.session_state[trigger_key].items():
                             default_values[k] = v
 
                 # Σχεδίαση των Number Inputs
@@ -367,8 +368,8 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                     save_to_csv(fin_df, FINANCIALS_FILE)
                     
                     # Καθαρισμός του OCR cache μετά την αποθήκευση
-                    if f"ocr_res_{fin_key}" in st.session_state:
-                        del st.session_state[f"ocr_res_{fin_key}"]
+                    if trigger_key in st.session_state:
+                        del st.session_state[trigger_key]
                         
                     st.session_state[f"success_emp_{fin_key}"] = True
                     st.rerun()
