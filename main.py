@@ -158,18 +158,22 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
                 if k in default_values:
                     default_values[k] = v
 
-    c1, c2 = st.columns(2)
-    v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f")
-    v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=default_values["ΙΚΑ_Εργοδ"], format="%.2f")
+    c1, c2, c3, c4 = st.columns(4)
+    v_ika_e = c1.number_input("ΙΚΑ Εργαζ.", value=d["ΙΚΑ_Εργ"], format="%.2f", key=f"ika_e_{fin_key}")
+    v_ika_o = c2.number_input("ΙΚΑ Εργοδ.", value=d["ΙΚΑ_Εργοδ"], format="%.2f", key=f"ika_o_{fin_key}")
+    v_tek_e = c3.number_input("ΤΕΚΑ Εργαζ.", value=d["ΤΕΚΑ_Εργ"], format="%.2f", key=f"tek_e_{fin_key}")
+    v_tek_o = c4.number_input("ΤΕΚΑ Εργοδ.", value=d["ΤΕΚΑ_Εργοδ"], format="%.2f", key=f"tek_o_{fin_key}")
     
-    c3, c4 = st.columns(2)
-    v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργ"], format="%.2f")
-    v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργοδ"], format="%.2f")
+    c5, c6, c7, c8 = st.columns(4)
+    v_sum_e = c5.number_input("Σύνολο Εισφορών", value=d["Σύνολο_Εισφ"], format="%.2f", key=f"sum_e_{fin_key}")
+    v_fmy   = c6.number_input("ΦΜΥ", value=d["ΦΜΥ"], format="%.2f", key=f"fmy_{fin_key}")
+    v_net   = c7.number_input("Καθαρές", value=d["Καθαρές"], format="%.2f", key=f"net_{fin_key}")
     
-    c5, c6, c7 = st.columns(3)
-    v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=default_values["Σύνολο_Εισφ"], format="%.2f")
-    v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f")
-    v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f")
+    # Το metric δεν χρειάζεται key
+    total_mix = v_tak + v_ad + v_pas + v_xri + v_ype + v_loi
+    c8.metric("Σύνολο Μικτών", f"{total_mix:,.2f} €")
+    
+    v_ops = st.number_input("Αιτούμενο ΟΠΣΚΕ", value=d["ΟΠΣΚΕ"], format="%.2f", key=f"opske_{fin_key}")
     
 # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS (ΕΠΑΝΩ) ---
     st.markdown("<p style='font-size:1rem; font-weight:bold;'>📊 Κατηγορίες Αποδοχών</p>", unsafe_allow_html=True)
