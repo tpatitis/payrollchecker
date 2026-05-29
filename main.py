@@ -9,22 +9,30 @@ import json
 GOOGLE_API_KEY = "AIzaSyB_NjdNwQrRHeFzfphVPz8qIfTzgEQ-zSg" 
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# --- 2. ΣΥΝΑΡΤΗΣΕΙΣ ΔΕΔΟΜΕΝΩΝ ---
-PROJECTS_FILE = 'data_projects.csv'
-EMPLOYEES_FILE = 'data_employees.csv'
-FINANCIALS_FILE = 'payroll_financials.csv'
-CHECKLIST_FILE = 'checklist_results.csv'
+# --- 2. ΣΥΝΑΡΤΗΣΕΙΣ ΔΕΔΟΜΕΝΩΝ (ΔΙΟΡΘΩΜΕΝΕΣ ΓΙΑ CLOUD) ---
+# Χρησιμοποιούμε τον κατάλογο /tmp/ για να έχουμε δικαιώματα εγγραφής στο Streamlit Cloud
+PROJECTS_FILE = '/tmp/data_projects.csv'
+EMPLOYEES_FILE = '/tmp/data_employees.csv'
+FINANCIALS_FILE = '/tmp/payroll_financials.csv'
+CHECKLIST_FILE = '/tmp/checklist_results.csv'
 
 def load_data(f, cols):
     if not os.path.isfile(f) or os.path.getsize(f) == 0:
         return pd.DataFrame(columns=cols)
     try:
-        return pd.read_csv(f)
+        df = pd.read_csv(f)
+        # Σιγουρεύουμε ότι όλες οι στήλες διαβάζονται ως κείμενο για να μην έχουμε θέμα στο φιλτράρισμα
+        for col in df.columns:
+            df[col] = df[col].astype(str).str.strip()
+        return df
     except:
         return pd.DataFrame(columns=cols)
 
 def save_to_csv(df, f):
-    df.to_csv(f, index=False, encoding='utf-8-sig')
+    try:
+        df.to_csv(f, index=False, encoding='utf-8-sig')
+    except Exception as e:
+        st.error(f"🚨 Σφάλμα αποθήκευσης αρχείου: {e}")
 
 def extract_payroll_with_ai(uploaded_file):
     try:
