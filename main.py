@@ -171,7 +171,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
         """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
         
         # ΠΡΟΣΟΧΗ: Αντικατάστησε το 'YOUR_API_KEY' με το πραγματικό σου κλειδί ή βάλε το στο st.secrets
-        API_KEY = "YOUR_API_KEY" 
+        API_KEY = st.secrets["GEMINI_API_KEY"]
         
         if not API_KEY or API_KEY == "YOUR_API_KEY":
             st.error("🔑 Παρακαλώ ορίστε το Google Gemini API Key στον κώδικα.")
