@@ -314,17 +314,23 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_df.columns if k != "ID_Κλειδί"}
                 
                 # ΑΝ Ο ΧΡΗΣΤΗΣ ΑΝΕΒΑΣΕΙ ΑΡΧΕΙΟ, ΤΡΕΧΕΙ ΤΟ AI OCR ΚΑΙ ΑΝΤΙΚΑΘΙΣΤΑ ΤΙΣ ΤΙΜΕΣ
+                # ΑΝ Ο ΧΡΗΣΤΗΣ ΑΝΕΒΑΣΕΙ ΑΡΧΕΙΟ, ΤΡΕΧΕΙ ΤΟ AI OCR ΚΑΙ ΑΝΤΙΚΑΘΙΣΤΑ ΤΙΣ ΤΙΜΕΣ
                 if uploaded_file is not None:
-                    # Χρησιμοποιούμε το session_state για να μην ξανατρέχει το API σε κάθε rerun της σελίδας
-                    if f"ocr_res_{fin_key}" not in st.session_state:
+                    # Δημιουργούμε ένα μοναδικό κλειδί που περιλαμβάνει και το όνομα του αρχείου
+                    file_fingerprint = f"{uploaded_file.name}_{uploaded_file.size}"
+                    ocr_cache_key = f"ocr_res_{fin_key}_{file_fingerprint}"
+                    
+                    # Αν δεν έχουμε ξανατρέξει OCR ΓΙΑ ΑΥΤΟ ΤΟ ΣΥΓΚΕΚΡΙΜΕΝΟ ΑΡΧΕΙΟ, τότε καλούμε το API
+                    if ocr_cache_key not in st.session_state:
                         with st.spinner("⏳ Το AI μελετά το έγγραφο μισθοδοσίας..."):
                             ocr_data = extract_financials_with_ai(uploaded_file)
                             if ocr_data:
-                                st.session_state[f"ocr_res_{fin_key}"] = ocr_data
+                                st.session_state[ocr_cache_key] = ocr_data
                     
-                    if f"ocr_res_{fin_key}" in st.session_state:
-                        st.info("🤖 Το AI αναγνώρισε τη μορφή της μισθοδοτικής και συμπλήρωσε τα πεδία!")
-                        for k, v in st.session_state[f"ocr_res_{fin_key}"].items():
+                    # Εφαρμογή των τιμών από τη μνήμη του συγκεκριμένου αρχείου
+                    if ocr_cache_key in st.session_state:
+                        st.info(f"🤖 Το AI ανέλυσε επιτυχώς το αρχείο: {uploaded_file.name}")
+                        for k, v in st.session_state[ocr_cache_key].items():
                             default_values[k] = v
 
                 # Σχεδίαση των Number Inputs με τις τιμές (είτε από CSV είτε από το AI OCR)
