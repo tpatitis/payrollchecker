@@ -147,16 +147,21 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
     import pydantic
     import json
 
-    # 1. ΕΝΙΣΧΥΜΕΝΟ SCHEMA
+    # 1. ΕΝΙΣΧΥΜΕΝΟ SCHEMA ΓΙΑ AI OCR & ΕΛΕΓΧΟ ΜΗΝΑ / ΕΙΔΟΥΣ ΑΠΟΔΟΧΩΝ
     class PayrollFinancials(pydantic.BaseModel):
-        ΙΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις ή εισφορές του ασφαλισμένου/εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Μην το μπερδεύεις με τις εργοδοτικές εισφορές.")
-        ΙΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Αναγράφονται συνήθως ως 'Εργοδοτικές Εισφορές' ή 'Εισφορές Εργοδότη'.")
-        ΤΕΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ (επικουρικό). Αν δεν υπάρχει ξεχωριστή γραμμή για ΤΕΚΑ, βάλε 0.0.")
-        ΤΕΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το ΤΕΚΑ. Αν δεν υπάρχει ξεχωριστή γραμμή, βάλε 0.0.")
-        Σύνολο_Εισφ: float = pydantic.Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου ή/και εργοδότη. Αν αναγράφεται 'Σύνολο Κρατήσεων' ή 'Σύνολο Εισφορών', πάρε αυτό το ποσό. Προσοχή συνήθως το σύνολο εισφορών περιλαμβάνει το ΦΜΥ. Να το επαληθεύεις προσθέτοντας τις εισφορές ΙΚΑ και ΤΕΚΑ εργαζομένου και εργοδότη")
-        ΦΜΥ: float = pydantic.Field(description="Ο Φόρος Μισθωτών Υπηρεσιών. Αναγράφεται ως Φ.Μ.Υ. ή 'Φόρος'. Αν δεν υπάρχει παρακράτηση φόρου, βάλε 0.0.")
-        Καθαρές: float = pydantic.Field(description="Το τελικό ποσό που μπαίνει στην τράπεζα στον υπάλληλο. Αναγράφεται ως 'Πληρωτέο', 'Καθαρό Πληρωτέο' ή 'Καθαρές Αποδοχές'.")
-        Σύνολο_Αποδ: float = pydantic.Field(description="Οι μικτές αποδοχές του υπαλλήλου πριν αφαιρεθούν οι κρατήσεις και ο φόρος. Αναγράφεται ως 'Μικτά', 'Σύνολο Αποδοχών' ή 'Τακτικές Αποδοχές'. Είναι το συνολικό κόστος του υπαλλήλου.")
+        Περίοδος_Εγγράφου: str = pydantic.Field(description="Ο μήνας και το έτος ή η συγκεκριμένη περίοδος μισθοδοσίας που αναγράφεται στο έγγραφο (π.χ. 'Μάιος 2024', 'Δώρο Πάσχα 2024', '11/2024').")
+        Τακτικές_Αποδοχές: float = pydantic.Field(description="Οι βασικές/τακτικές μικτές αποδοχές του υπαλλήλου για τον συγκεκριμένο μήνα. Αν δεν διακρίνεται ξεχωριστά, βάλε το σύνολο των αποδοχών εδώ.")
+        Δώρο_Πάσχα: float = pydantic.Field(description="Το ποσό για Δώρο Πάσχα, αν περιλαμβάνεται στο έγγραφο. Διαφορετικά 0.0.")
+        Δώρο_Χριστουγέννων: float = pydantic.Field(description="Το ποσό για Δώρο Χριστουγέννων, αν περιλαμβάνεται στο έγγραφο. Διαφορετικά 0.0.")
+        Επίδομα_Άδειας: float = pydantic.Field(description="Το ποσό για Επίδομα Άδειας, αν περιλαμβάνεται στο έγγραφο. Διαφορετικά 0.0.")
+        Σύνολο_Αποδ: float = pydantic.Field(description="Οι συνολικές μικτές αποδοχές του υπαλλήλου (το άθροισμα Τακτικών, Δώρων και Επιδομάτων).")
+        ΙΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις του εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ).")
+        ΙΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ).")
+        ΤΕΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ. Αν δεν υπάρχει, 0.0.")
+        ΤΕΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το ΤΕΚΑ. Αν δεν υπάρχει, 0.0.")
+        Σύνολο_Εισφ: float = pydantic.Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου και εργοδότη.")
+        ΦΜΥ: float = pydantic.Field(description="Ο Φόρος Μισθωτών Υπηρεσιών (Φ.Μ.Υ.). Αν δεν υπάρχει, 0.0.")
+        Καθαρές: float = pydantic.Field(description="Το τελικό πληρωτέο ποσό στον υπάλληλο (καθαρό ποσό τραπέζης).")
 
     def extract_financials_with_ai(uploaded_file, emp_name):
         """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
@@ -183,13 +188,10 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
             👉 ΥΠΑΛΛΗΛΟΣ ΠΡΟΣ ΕΛΕΓΧΟ: "{emp_name}"
             
             ΑΥΣΤΗΡΟΙ ΚΑΝΟΝΕΣ:
-            1. ΠΡΟΥΠΟΘΕΣΗ ΟΝΟΜΑΤΟΣ: Αν το όνομα "{emp_name}" ΔΕΝ αναγράφεται πουθενά μέσα στο έγγραφο (ή αν αναγράφεται τελείως διαφορετικό όνομα), τότε ΜΗΝ ΕΞΑΓΕΙΣ ΚΑΝΕΝΑ ΠΟΣΟ. Σε αυτή την περίπτωση, βάλε σε όλα τα πεδία του JSON την τιμή 0.0.
-            2. ΜΟΝΟ ΑΤΟΜΙΚΑ ΣΤΟΙΧΕΙΑ: Αν το έγγραφο είναι μια συγκεντρωτική κατάσταση πολλών υπαλλήλων, βρες τη γραμμή ή το τμήμα που αντιστοιχεί στον "{emp_name}" και πάρε ΜΟΝΟ τα δικά του ποσά. 
-            3. ΑΓΝΟΗΣΕ ΓΕΝΙΚΑ ΣΥΝΟΛΑ: Μην πάρεις ποτέ τα "Γενικά Σύνολα", "Σύνολα Σελίδας" ή συνολικά αθροίσματα της επιχείρησης, εκτός αν ο "{emp_name}" είναι ο μοναδικός υπάλληλος στο έγγραφο και τα ατομικά του ποσά ταυτίζονται με το σύνολο.
-            4. Μην μπερδεύεις τις στήλες 'Αποδοχές', 'Κρατήσεις' και 'Εργοδοτικές Εισφορές'.
-            5. Το 'Καθαρές' είναι ΠΑΝΤΑ το πληρωτέο ποσό στον εργαζόμενο (αυτό που κατατίθεται στην τράπεζα).
-            6. Το 'Σύνολο_Αποδ' είναι οι συνολικές μικτές αποδοχές του συγκεκριμένου υπαλλήλου.
-            7. Έλεγξε τα μαθηματικά: Μικτά (Σύνολο_Αποδ) - Κρατήσεις Εργαζομένου - ΦΜΥ = Καθαρές (Πληρωτέο).
+            1. ΠΡΟΥΠΟΘΕΣΗ ΟΝΟΜΑΤΟΣ: Αν το όνομα "{emp_name}" ΔΕΝ αναγράφεται πουθενά μέσα στο έγγραφο, βάλε σε όλα τα αριθμητικά πεδία την τιμή 0.0.
+            2. ΕΛΕΓΧΟΣ ΜΗΝΑ/ΠΕΡΙΟΔΟΥ: Εντόπισε την περίοδο μισθοδοσίας (π.χ. 'Μάιος 2024', 'Δώρο Πάσχα 2025', 'Απρίλιος 2024') και γράψε την επακριβώς στο πεδίο 'Περίοδος_Εγγράφου'. Αν το έγγραφο περιλαμβάνει πολλούς μήνες ή αναδρομικά, προσπάθησε να αποτυπώσεις την κύρια περίοδο που αφορά τη γραμμή του υπαλλήλου.
+            3. ΔΙΑΚΡΙΣΗ ΕΙΔΟΥΣ ΑΠΟΔΟΧΩΝ: Μελέτησε προσεκτικά την περιγραφή των αποδοχών. Ξεχώρισε τις 'Τακτικές_Αποδοχές', το 'Δώρο_Πάσχα', το 'Δώρο_Χριστουγέννων' και το 'Επίδομα_Άδειας'. Το 'Σύνολο_Αποδ' πρέπει να είναι το άθροισμα αυτών των επιμέρους κατηγοριών.
+            4. ΜΟΝΟ ΑΤΟΜΙΚΑ ΣΤΟΙΧΕΙΑ: Αγνοήστε τα γενικά σύνολα της επιχείρησης. Πάρτε μόνο τα ποσά που βρίσκονται στη γραμμή ή την καρτέλα του/της "{emp_name}".
             """
 
             response = client.models.generate_content(
@@ -292,58 +294,112 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
 
                 # --- ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI OCR ---
                 st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
-                st.subheader("💰 Οικονομικά Στοιχεία")
+                st.subheader("💰 Οικονομικά Στοιχεία & Ανάλυση Είδους Αποδοχών")
                 
                 uploaded_file = st.file_uploader("📂 Μεταφορτώστε τη Μισθοδοτική", type=['png', 'jpg', 'jpeg', 'pdf'], key=f"up_{fin_key}")
                 
-                fin_df = load_data(FINANCIALS_FILE, ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Σύνολο_Αποδ", "ΟΠΣΚΕ"])
+                # Ορισμός στηλών για το αρχείο financials (προσθέσαμε τις νέες κατηγορίες αποδοχών και την περίοδο)
+                fin_columns = [
+                    "ID_Κλειδί", "Περίοδος_Εγγράφου", "Τακτικές_Αποδοχές", "Δώρο_Πάσχα", 
+                    "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Σύνολο_Αποδ", "ΙΚΑ_Εργ", 
+                    "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "ΟΠΣΚΕ"
+                ]
+                fin_df = load_data(FINANCIALS_FILE, fin_columns)
                 ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
                 
-                default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_df.columns if k != "ID_Κλειδί"}
+                # Αρχικές τιμές
+                default_values = {k: (ext_fin[k].iloc[0] if not ext_fin.empty and k in ext_fin.columns else (0.0 if k != "Περίοδος_Εγγράφου" else "")) for k in fin_columns if k != "ID_Κλειδί"}
                 
                 if uploaded_file is not None:
                     file_fingerprint = f"{uploaded_file.name}_{uploaded_file.size}"
                     trigger_key = f"ocr_data_{fin_key}_{file_fingerprint}"
                     
                     if st.button("🤖 Έναρξη Ανάλυσης AI", type="primary", use_container_width=True):
-                        with st.spinner("⏳ Το AI μελετά το έγγραφο μισθοδοσίας..."):
+                        with st.spinner("⏳ Το AI μελετά το έγγραφο και ελέγχει την περίοδο..."):
                             ocr_data = extract_financials_with_ai(uploaded_file, emp_data['Ονοματεπώνυμο'])
                             if ocr_data:
                                 st.session_state[trigger_key] = ocr_data
-                                # ΔΙΟΡΘΩΣΗ BUG: st.rerun() για να "ακουστούν" αμέσως οι τιμές στα inputs
                                 st.rerun()
                     
                     if trigger_key in st.session_state:
                         for k, v in st.session_state[trigger_key].items():
                             default_values[k] = v
 
-                # Σχεδίαση των Number Inputs
+                # 🔥 ΕΛΕΓΧΟΣ ΜΗΝΑ (VALIDATION): Σύγκριση επιλογής χρήστη και εύρηματος AI
+                if default_values["Περίοδος_Εγγράφου"]:
+                    ai_period = str(default_values["Περίοδος_Εγγράφου"]).lower()
+                    user_month = selected_month.lower()
+                    user_year = str(selected_year)
+                    
+                    # Έλεγχος αν ο επιλεγμένος μήνας ή το έτος λείπουν από το κείμενο που διάβασε το AI
+                    if (user_month[:4] not in ai_period) or (user_year not in ai_period):
+                        st.warning(
+                            f"⚠️ **ΠΡΟΣΟΧΗ: ΠΙΘΑΝΟ ΛΑΘΟΣ ΑΡΧΕΙΟ Ή ΠΟΛΛΑΠΛΟΙ ΜΗΝΕΣ!**\n\n"
+                            f"Έχετε επιλέξει περίοδο **{period}**, αλλά το AI εντόπισε στο έγγραφο την ένδειξη: "
+                            f"« **{default_values['Περίοδος_Εγγράφου']}** ». Παρακαλώ επαληθεύστε τα στοιχεία."
+                        )
+                    else:
+                        st.success(f"✅ Η περίοδος του εγγράφου επαληθεύτηκε επιτυχώς: **{default_values['Περίοδος_Εγγράφου']}**")
+
+                # Σχεδίαση των Inputs στην οθόνη
+                st.text_input("📅 Περίοδος που αναγράφεται στο έγγραφο (AI Εύρημα)", value=default_values["Περίοδος_Εγγράφου"], key="input_period_doc")
+                
+                st.markdown("##### **Ανάλυση Μικτών Αποδοχών**")
+                c_ap1, c_ap2, c_ap3, c_ap4 = st.columns(4)
+                v_tak_ap = c_ap1.number_input("Τακτικές Αποδοχές", value=float(default_values["Τακτικές_Αποδοχές"]), format="%.2f")
+                v_d_pasxa = c_ap2.number_input("Δώρο Πάσχα", value=float(default_values["Δώρο_Πάσχα"]), format="%.2f")
+                v_d_xrist = c_ap3.number_input("Δώρο Χριστουγέννων", value=float(default_values["Δώρο_Χριστουγέννων"]), format="%.2f")
+                v_epid_ad = c_ap4.number_input("Επίδομα Άδειας", value=float(default_values["Επίδομα_Άδειας"]), format="%.2f")
+
+                st.markdown("##### **Κρατήσεις & Ασφαλιστικά**")
                 c1, c2 = st.columns(2)
-                v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f")
-                v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=default_values["ΙΚΑ_Εργοδ"], format="%.2f")
+                v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=float(default_values["ΙΚΑ_Εργ"]), format="%.2f")
+                v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=float(default_values["ΙΚΑ_Εργοδ"]), format="%.2f")
                 
                 c3, c4 = st.columns(2)
-                v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργ"], format="%.2f")
-                v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργοδ"], format="%.2f")
+                v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=float(default_values["ΤΕΚΑ_Εργ"]), format="%.2f")
+                v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=float(default_values["ΤΕΚΑ_Εργοδ"]), format="%.2f")
                 
+                st.markdown("##### **Σύνολα & Φόροι**")
                 c5, c6, c7 = st.columns(3)
-                v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=default_values["Σύνολο_Εισφ"], format="%.2f")
-                v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f")
-                v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f")
+                v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=float(default_values["Σύνολο_Εισφ"]), format="%.2f")
+                v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=float(default_values["ΦΜΥ"]), format="%.2f")
+                v_net = c7.number_input("Καθαρές Αποδοχές (Πληρωτέο)", value=float(default_values["Καθαρές"]), format="%.2f")
                 
                 c8, c9, c10 = st.columns(3)
-                v_total_ap = c8.number_input("Σύνολο Αποδοχών", value=default_values["Σύνολο_Αποδ"], format="%.2f")
-                v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=default_values["ΟΠΣΚΕ"], format="%.2f")
+                v_total_ap = c8.number_input("Σύνολο Μικτών Αποδοχών (Έγγραφο)", value=float(default_values["Σύνολο_Αποδ"]), format="%.2f")
+                v_opske = c9.number_input("Αιτούμενο Ποσό ΟΠΣΚΕ", value=float(default_values["ΟΠΣΚΕ"]), format="%.2f")
                 
-                calc_total = v_net + v_sum_eisf + v_fmy
-                c10.markdown(f"<div style='background-color:#e8f5e9; padding:10px; border-radius:5px; border:1px solid #4caf50; text-align:center; margin-top:15px;'><small>Έλεγχος Αθροίσματος</small><br><b>{calc_total:,.2f} €</b></div>", unsafe_allow_html=True)
+                # Υπολογισμός και έλεγχος αθροισμάτων
+                calc_total_ap = v_tak_ap + v_d_pasxa + v_d_xrist + v_epid_ad
+                c10.markdown(f"<div style='background-color:#e8f5e9; padding:5px; border-radius:5px; border:1px solid #4caf50; text-align:center; margin-top:10px;'><small>Άθροισμα Ειδών Αποδοχών</small><br><b>{calc_total_ap:,.2f} €</b></div>", unsafe_allow_html=True)
 
                 if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
+                    # 1. Αποθήκευση Checklists
                     new_ks = [r['ID_Κλειδί'] for r in all_results]
                     audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
                     save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
                     
-                    fin_row = {"ID_Κλειδί": fin_key, "ΙΚΑ_Εργ": v_ika_erg, "ΙΚΑ_Εργοδ": v_ika_ergo, "ΤΕΚΑ_Εργ": v_teka_erg, "ΤΕΚΑ_Εργοδ": v_teka_ergo, "Σύνολο_Εισφ": v_sum_eisf, "ΦΜΥ": v_fmy, "Καθαρές": v_net, "Σύνολο_Αποδ": v_total_ap, "ΟΠΣΚΕ": v_opske}
+                    # 2. Δημιουργία δομής εγγραφής οικονομικών στοιχείων
+                    fin_row = {
+                        "ID_Κλειδί": fin_key,
+                        "Περίοδος_Εγγράφου": st.session_state.get("input_period_doc", default_values["Περίοδος_Εγγράφου"]),
+                        "Τακτικές_Αποδοχές": v_tak_ap,
+                        "Δώρο_Πάσχα": v_d_pasxa,
+                        "Δώρο_Χριστουγέννων": v_d_xrist,
+                        "Επίδομα_Άδειας": v_epid_ad,
+                        "Σύνολο_Αποδ": v_total_ap,
+                        "ΙΚΑ_Εργ": v_ika_erg,
+                        "ΙΚΑ_Εργοδ": v_ika_ergo,
+                        "ΤΕΚΑ_Εργ": v_teka_erg,
+                        "ΤΕΚΑ_Εργοδ": v_teka_ergo,
+                        "Σύνολο_Εισφ": v_sum_eisf,
+                        "ΦΜΥ": v_fmy,
+                        "Καθαρές": v_net,
+                        "ΟΠΣΚΕ": v_opske
+                    }
+                    
+                    # 3. Ένωση και αποθήκευση στο CSV
                     fin_df = pd.concat([fin_df[fin_df['ID_Κλειδί'] != fin_key], pd.DataFrame([fin_row])], ignore_index=True)
                     save_to_csv(fin_df, FINANCIALS_FILE)
                     
