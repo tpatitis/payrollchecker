@@ -171,42 +171,49 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f")
     v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f")
     
-   # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
-    st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Ανάλυση Αποδοχών</p>", unsafe_allow_html=True)
+  # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
+    st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Αναλυτικά Στοιχεία ανά Κατηγορία</p>", unsafe_allow_html=True)
     
-    # Ορισμός των Tabs
+    # Βοηθητική συνάρτηση για τα πεδία που εμφανίζονται σε κάθε tab
+    def render_financial_fields(v_main_input):
+        c1, c2 = st.columns(2)
+        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f")
+        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=default_values["ΙΚΑ_Εργοδ"], format="%.2f")
+        
+        c3, c4 = st.columns(2)
+        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργ"], format="%.2f")
+        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργοδ"], format="%.2f")
+        
+        c5, c6, c7 = st.columns(3)
+        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=default_values["Σύνολο_Εισφ"], format="%.2f")
+        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f")
+        v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f")
+        
+        st.markdown("---")
+        c8, c9 = st.columns(2)
+        c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_main_input, format="%.2f", disabled=True)
+        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=default_values["ΟΠΣΚΕ"], format="%.2f")
+        
+        return v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske
+
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
     
-    # 1. Τακτικές αποδοχές
+    # Εμφάνιση σε κάθε tab
     with tabs[0]:
-        v_tak_ap = st.number_input("Βασικός Μισθός / Τακτικές (€)", value=default_values["Τακτικές_Αποδ"], format="%.2f", key=f"reg_{fin_key}")
-        # Οι μεταβλητές που δεν υπάρχουν πλέον στις καρτέλες ορίζονται στο 0
-        v_yp_ap = 0.0
-        v_loip_ap = 0.0
-
-    # 2. Δώρο Πάσχα
+        v_tak_ap = st.number_input("Βασικός Μισθός / Τακτικές (€)", value=default_values["Τακτικές_Αποδ"], format="%.2f")
+        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_tak_ap)
+    
     with tabs[1]:
-        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values["Δώρο_Πάσχα"], format="%.2f", key=f"dp_{fin_key}")
+        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values["Δώρο_Πάσχα"], format="%.2f")
+        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_doro_pasxa)
 
-    # 3. Δώρο Χριστουγέννων
     with tabs[2]:
-        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=default_values["Δώρο_Χριστουγέννων"], format="%.2f", key=f"dx_{fin_key}")
+        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=default_values["Δώρο_Χριστουγέννων"], format="%.2f")
+        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_doro_xrist)
 
-    # 4. Επίδομα αδείας
     with tabs[3]:
-        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=default_values["Επίδομα_Άδειας"], format="%.2f", key=f"ea_{fin_key}")
-
-    # Αυτόματος υπολογισμός συνόλου μικτών (χωρίς υπερωρίες/bonus)
-    v_total_ap = v_tak_ap + v_doro_pasxa + v_doro_xrist + v_epidoma_ad
-    
-       
-    st.markdown("<br>", unsafe_allow_html=True)
-    c8, c9, c10 = st.columns(3)
-    c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_total_ap, format="%.2f", disabled=True, help="Υπολογίζεται αυτόματα από το άθροισμα όλων των Tabs.")
-    v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=default_values["ΟΠΣΚΕ"], format="%.2f")
-    
-    calc_total = v_net + v_sum_eisf + v_fmy
-    c10.markdown(f"<div style='background-color:#e8f5e9; padding:10px; border-radius:5px; border:1px solid #4caf50; text-align:center; margin-top:15px;'><small>Έλεγχος Αθροίσματος</small><br><b>{calc_total:,.2f} €</b></div>", unsafe_allow_html=True)
+        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=default_values["Επίδομα_Άδειας"], format="%.2f")
+        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_epidoma_ad)
 
     if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
         new_ks = [r['ID_Κλειδί'] for r in all_results]
