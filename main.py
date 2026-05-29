@@ -157,42 +157,48 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         
         # Αν έχουμε ήδη δεδομένα από το AI
         if trigger_key in st.session_state:
-            ocr_data = st.session_state[trigger_key]
-    tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
-    
+        ocr_data = st.session_state[trigger_key]
+
+    tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
+
     with tabs[0]:
-        # Περνάμε το ocr_data εδώ
-        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields("tab0", default_values, ocr_data)
+        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=default_values.get("Τακτικές_Αποδ", 0.0), format="%.2f", key="tab_0_main")
+        v_ika_erg0, v_ika_ergo0, v_teka_erg0, v_teka_ergo0, v_sum_eisf0, v_fmy0, v_net0, v_opske0 = render_financial_fields("tab0", default_values, ocr_data)
+
+    with tabs[1]:
+        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values.get("Δώρο_Πάσχα", 0.0), format="%.2f", key="tab_1_main")
+        v_ika_erg1, v_ika_ergo1, v_teka_erg1, v_teka_ergo1, v_sum_eisf1, v_fmy1, v_net1, v_opske1 = render_financial_fields("tab1", default_values, ocr_data)
         
   # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
     st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Αναλυτικά Στοιχεία ανά Κατηγορία</p>", unsafe_allow_html=True)
     
     # Βοηθητική συνάρτηση για τα πεδία που εμφανίζονται σε κάθε tab
-    def render_financial_fields(v_main_input, tab_key):
-        def get_val(key_name, default_key):
+    def render_financial_fields(tab_key, default_values, ocr_data):
+    """Συνάρτηση που αποδίδει τα πεδία εισαγωγής με λογική AI ή Default"""
+    
+    def get_val(key_name, default_key):
+        # Αν υπάρχει στο OCR, επιστρέφει το OCR, αλλιώς το default
         return ocr_data.get(key_name, default_values.get(default_key, 0.0))
-        
-        c1, c2 = st.columns(2)
-        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=get_val("ΙΚΑ_Εργ", "ΙΚΑ_Εργ"), format="%.2f", key=f"ika_erg_{tab_key}")
-        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=get_val("ΙΚΑ_Εργοδ", "ΙΚΑ_Εργοδ"), format="%.2f", key=f"ika_ergo_{tab_key}")
-    
-        c3, c4 = st.columns(2)
-        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=get_val("ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργ"), format="%.2f", key=f"teka_erg_{tab_key}")
-        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=get_val("ΤΕΚΑ_Εργοδ", "ΤΕΚΑ_Εργοδ"), format="%.2f", key=f"teka_ergo_{tab_key}")
-    
-        c5, c6, c7 = st.columns(3)
-        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=get_val("Σύνολο_Εισφ", "Σύνολο_Εισφ"), format="%.2f", key=f"sum_eisf_{tab_key}")
-        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=get_val("ΦΜΥ", "ΦΜΥ"), format="%.2f", key=f"fmy_{tab_key}")
-        v_net = c7.number_input("Καθαρές Αποδοχές", value=get_val("Καθαρές", "Καθαρές"), format="%.2f", key=f"net_{tab_key}")
-    
-        st.markdown("---")
-        c8, c9 = st.columns(2)
-        # Προσοχή: Το disabled widget δεν χρειάζεται key συνήθως, αλλά αν δημιουργεί θέμα, πρόσθεσε ένα
-        c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_main_input, format="%.2f", disabled=True, key=f"total_ap_{tab_key}")
-        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=get_val("ΟΠΣΚΕ", "ΟΠΣΚΕ"), format="%.2f", key=f"opske_{tab_key}")
-    
-        return v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske
 
+    c1, c2 = st.columns(2)
+    v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=get_val("ΙΚΑ_Εργ", "ΙΚΑ_Εργ"), format="%.2f", key=f"ika_erg_{tab_key}")
+    v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=get_val("ΙΚΑ_Εργοδ", "ΙΚΑ_Εργοδ"), format="%.2f", key=f"ika_ergo_{tab_key}")
+
+    c3, c4 = st.columns(2)
+    v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=get_val("ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργ"), format="%.2f", key=f"teka_erg_{tab_key}")
+    v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=get_val("ΤΕΚΑ_Εργοδ", "ΤΕΚΑ_Εργοδ"), format="%.2f", key=f"teka_ergo_{tab_key}")
+
+    c5, c6, c7 = st.columns(3)
+    v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=get_val("Σύνολο_Εισφ", "Σύνολο_Εισφ"), format="%.2f", key=f"sum_eisf_{tab_key}")
+    v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=get_val("ΦΜΥ", "ΦΜΥ"), format="%.2f", key=f"fmy_{tab_key}")
+    v_net = c7.number_input("Καθαρές Αποδοχές", value=get_val("Καθαρές", "Καθαρές"), format="%.2f", key=f"net_{tab_key}")
+
+    st.markdown("---")
+    c8, c9 = st.columns(2)
+    # Το σύνολο αποδοχών (μικτά) έρχεται από το tab_main input
+    v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=get_val("ΟΠΣΚΕ", "ΟΠΣΚΕ"), format="%.2f", key=f"opske_{tab_key}")
+
+    return v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
     with tabs[0]:
