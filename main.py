@@ -78,7 +78,7 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         1. ΠΡΟΥΠΟΘΕΣΗ ΟΝΟΜΑΤΟΣ: Αν το όνομα "{emp_name}" ΔΕΝ αναγράφεται πουθενά μέσα στο έγγραφο, τότε ΜΗΝ ΕΞΑΓΕΙΣ ΚΑΝΕΝΑ ΠΟΣΟ. Βάλε παντού 0.0.
         2. ΜΟΝΟ ΑΤΟΜΙΚΑ ΣΤΟΙΧΕΙΑ: Βρες τη γραμμή ή το τμήμα που αντιστοιχεί στον "{emp_name}" και πάρε ΜΟΝΟ τα δικά του ποσά. 
         3. ΑΓΝΟΗΣΕ ΓΕΝΙΚΑ ΣΥΝΟΛΑ: Μην πάρεις ποτέ τα συνολικά αθροίσματα της επιχείρησης.
-        4. ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ: Ξεχώρισε προσεκτικά τον Βασικό Μισθό (Τακτικές), τις Υπερωρίες, τα Δώρα (Πάσχα/Χριστουγέννων), το Επίδομα Άδειας και τα Λοιπά Bonus.
+        4. ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ: Ξεχώρισε προσεκτικά τον Βασικό Μισθό (Τακτικές), ΤΟ φμυ, τα Δώρα (Πάσχα/Χριστουγέννων), το Επίδομα Άδειας και τα Λοιπά Bonus.
         5. Το 'Καθαρές' είναι ΠΑΝΤΑ το πληρωτέο ποσό στον εργαζόμενο.
         """
 
@@ -171,30 +171,33 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f")
     v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f")
     
-    # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
-    st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Ανάλυση & Τύπος Αποδοχών</p>", unsafe_allow_html=True)
-    tab_regular, tab_overtime, tab_bonuses = st.tabs([
-        "📅 1. Τακτικές Αποδοχές", 
-        "⚡ 2. Υπερωρίες / Υπερεργασία", 
-        "🎁 3. Δώρα & Επιδόματα"
-    ])
+   # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
+    st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Ανάλυση Αποδοχών</p>", unsafe_allow_html=True)
     
-    with tab_regular:
-        st.caption("Μισθοί και σταθερές αποδοχές περιόδου")
-        v_tak_ap = st.number_input("Βασικός Μισθός / Τακτικές Αποδοχές (€)", value=default_values["Τακτικές_Αποδ"], format="%.2f", key=f"reg_{fin_key}")
-        
-    with tab_overtime:
-        st.caption("Πρόσθετες αμοιβές εκτός ωραρίου")
-        v_yp_ap = st.number_input("Αμοιβή Υπερωριών / Υπερεργασίας (€)", value=default_values["Υπερωρίες"], format="%.2f", key=f"ovt_{fin_key}")
-        
-    with tab_bonuses:
-        st.caption("Έκτακτες αποδοχές, δώρα εορτών και άδειες")
-        c_b1, c_b2, c_b3 = st.columns(3)
-        v_doro_pasxa = c_b1.number_input("Δώρο Πάσχα (€)", value=default_values["Δώρο_Πάσχα"], format="%.2f", key=f"dp_{fin_key}")
-        v_doro_xrist = c_b2.number_input("Δώρο Χριστουγέννων (€)", value=default_values["Δώρο_Χριστουγέννων"], format="%.2f", key=f"dx_{fin_key}")
-        v_epidoma_ad = c_b3.number_input("Επίδομα Άδειας (€)", value=default_values["Επίδομα_Άδειας"], format="%.2f", key=f"ea_{fin_key}")
-        
-        v_loip_ap = st.number_input("Λοιπά Επιδόματα / Bonus (€)", value=default_values["Λοιπά_Αποδ"], format="%.2f", key=f"loip_{fin_key}")
+    # Ορισμός των Tabs
+    tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
+    
+    # 1. Τακτικές αποδοχές
+    with tabs[0]:
+        v_tak_ap = st.number_input("Βασικός Μισθός / Τακτικές (€)", value=default_values["Τακτικές_Αποδ"], format="%.2f", key=f"reg_{fin_key}")
+        # Οι μεταβλητές που δεν υπάρχουν πλέον στις καρτέλες ορίζονται στο 0
+        v_yp_ap = 0.0
+        v_loip_ap = 0.0
+
+    # 2. Δώρο Πάσχα
+    with tabs[1]:
+        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values["Δώρο_Πάσχα"], format="%.2f", key=f"dp_{fin_key}")
+
+    # 3. Δώρο Χριστουγέννων
+    with tabs[2]:
+        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=default_values["Δώρο_Χριστουγέννων"], format="%.2f", key=f"dx_{fin_key}")
+
+    # 4. Επίδομα αδείας
+    with tabs[3]:
+        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=default_values["Επίδομα_Άδειας"], format="%.2f", key=f"ea_{fin_key}")
+
+    # Αυτόματος υπολογισμός συνόλου μικτών (χωρίς υπερωρίες/bonus)
+    v_total_ap = v_tak_ap + v_doro_pasxa + v_doro_xrist + v_epidoma_ad
     
     # Αυτόματος υπολογισμός συνόλου μικτών
     v_total_ap = v_tak_ap + v_yp_ap + v_doro_pasxa + v_doro_xrist + v_epidoma_ad + v_loip_ap
