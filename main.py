@@ -188,21 +188,21 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
-with tabs[0]:
-    v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=default_values["Τακτικές_Αποδ"], format="%.2f", key="tab_0_main")
-    v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_tak_ap, "tab0")
+    with tabs[0]:
+        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=default_values["Τακτικές_Αποδ"], format="%.2f", key="tab_0_main")
+        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_tak_ap, "tab0")
 
-with tabs[1]:
-    v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values["Δώρο_Πάσχα"], format="%.2f", key="tab_1_main")
-    v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_doro_pasxa, "tab1")
+    with tabs[1]:
+        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values["Δώρο_Πάσχα"], format="%.2f", key="tab_1_main")
+        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_doro_pasxa, "tab1")
 
-with tabs[2]:
-    v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=default_values["Δώρο_Χριστουγέννων"], format="%.2f", key="tab_2_main")
-    v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_doro_xrist, "tab2")
+    with tabs[2]:
+        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=default_values["Δώρο_Χριστουγέννων"], format="%.2f", key="tab_2_main")
+        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_doro_xrist, "tab2")
 
-with tabs[3]:
-    v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=default_values["Επίδομα_Άδειας"], format="%.2f", key="tab_3_main")
-    v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_epidoma_ad, "tab3")
+    with tabs[3]:
+        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=default_values["Επίδομα_Άδειας"], format="%.2f", key="tab_3_main")
+        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_epidoma_ad, "tab3")
     if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
         new_ks = [r['ID_Κλειδί'] for r in all_results]
         audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
