@@ -164,27 +164,27 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Αναλυτικά Στοιχεία ανά Κατηγορία</p>", unsafe_allow_html=True)
     
     # Βοηθητική συνάρτηση για τα πεδία που εμφανίζονται σε κάθε tab
-   def render_financial_fields(v_main_input, tab_key):
-    c1, c2 = st.columns(2)
-    v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f", key=f"ika_erg_{tab_key}")
-    v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=default_values["ΙΚΑ_Εργοδ"], format="%.2f", key=f"ika_ergo_{tab_key}")
+    def render_financial_fields(v_main_input, tab_key):
+        c1, c2 = st.columns(2)
+        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f", key=f"ika_erg_{tab_key}")
+        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=default_values["ΙΚΑ_Εργοδ"], format="%.2f", key=f"ika_ergo_{tab_key}")
     
-    c3, c4 = st.columns(2)
-    v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργ"], format="%.2f", key=f"teka_erg_{tab_key}")
-    v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργοδ"], format="%.2f", key=f"teka_ergo_{tab_key}")
+        c3, c4 = st.columns(2)
+        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργ"], format="%.2f", key=f"teka_erg_{tab_key}")
+        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργοδ"], format="%.2f", key=f"teka_ergo_{tab_key}")
     
-    c5, c6, c7 = st.columns(3)
-    v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=default_values["Σύνολο_Εισφ"], format="%.2f", key=f"sum_eisf_{tab_key}")
-    v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f", key=f"fmy_{tab_key}")
-    v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f", key=f"net_{tab_key}")
+        c5, c6, c7 = st.columns(3)
+        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=default_values["Σύνολο_Εισφ"], format="%.2f", key=f"sum_eisf_{tab_key}")
+        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f", key=f"fmy_{tab_key}")
+        v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f", key=f"net_{tab_key}")
     
-    st.markdown("---")
-    c8, c9 = st.columns(2)
-    # Προσοχή: Το disabled widget δεν χρειάζεται key συνήθως, αλλά αν δημιουργεί θέμα, πρόσθεσε ένα
-    c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_main_input, format="%.2f", disabled=True, key=f"total_ap_{tab_key}")
-    v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=default_values["ΟΠΣΚΕ"], format="%.2f", key=f"opske_{tab_key}")
+        st.markdown("---")
+        c8, c9 = st.columns(2)
+        # Προσοχή: Το disabled widget δεν χρειάζεται key συνήθως, αλλά αν δημιουργεί θέμα, πρόσθεσε ένα
+        c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_main_input, format="%.2f", disabled=True, key=f"total_ap_{tab_key}")
+        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=default_values["ΟΠΣΚΕ"], format="%.2f", key=f"opske_{tab_key}")
     
-    return v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske
+        return v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske
 
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
