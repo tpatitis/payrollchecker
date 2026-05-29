@@ -344,4 +344,11 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                     save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
                     
                     fin_row = {"ID_Κλειδί": fin_key, "ΙΚΑ_Εργ": v_ika_erg, "ΙΚΑ_Εργοδ": v_ika_ergo, "ΤΕΚΑ_Εργ": v_teka_erg, "ΤΕΚΑ_Εργοδ": v_teka_ergo, "Σύνολο_Εισφ": v_sum_eisf, "ΦΜΥ": v_fmy, "Καθαρές": v_net, "Σύνολο_Αποδ": v_total_ap, "ΟΠΣΚΕ": v_opske}
-                    fin_df = pd.concat(
+                    fin_df = pd.concat([fin_df[fin_df['ID_Κλειδί'] != fin_key], pd.DataFrame([fin_row])], ignore_index=True)
+                    save_to_csv(fin_df, FINANCIALS_FILE)
+                    
+                    if 'trigger_key' in locals() and trigger_key in st.session_state:
+                        del st.session_state[trigger_key]
+                        
+                    st.session_state[f"success_emp_{fin_key}"] = True
+                    st.rerun()
