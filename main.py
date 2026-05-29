@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 # --- 1. ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ ---
 st.set_page_config(
     page_title="Payroll Verifier Pro",
-    page_icon="🛡️",
+    page_icon="🛡️",
     layout="wide"
 )
 
