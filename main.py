@@ -173,23 +173,23 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         return ocr_data.get(key_name, default_values.get(default_key, 0.0))
         
         c1, c2 = st.columns(2)
-        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=dget_val("ΙΚΑ_Εργ", "ΙΚΑ_Εργ"), format="%.2f", key=f"ika_erg_{tab_key}")
-        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=dget_val("ΙΚΑ_Εργοδ", "ΙΚΑ_Εργοδ"), format="%.2f", key=f"ika_ergo_{tab_key}")
+        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=get_val("ΙΚΑ_Εργ", "ΙΚΑ_Εργ"), format="%.2f", key=f"ika_erg_{tab_key}")
+        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=get_val("ΙΚΑ_Εργοδ", "ΙΚΑ_Εργοδ"), format="%.2f", key=f"ika_ergo_{tab_key}")
     
         c3, c4 = st.columns(2)
-        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=dget_val[("ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργ"), format="%.2f", key=f"teka_erg_{tab_key}")
-        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=dget_val("ΤΕΚΑ_Εργοδ", "ΤΕΚΑ_Εργοδ"), format="%.2f", key=f"teka_ergo_{tab_key}")
+        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=get_val("ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργ"), format="%.2f", key=f"teka_erg_{tab_key}")
+        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=get_val("ΤΕΚΑ_Εργοδ", "ΤΕΚΑ_Εργοδ"), format="%.2f", key=f"teka_ergo_{tab_key}")
     
         c5, c6, c7 = st.columns(3)
-        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=dget_val("Σύνολο_Εισφ", "Σύνολο_Εισφ"), format="%.2f", key=f"sum_eisf_{tab_key}")
-        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=dget_val("ΦΜΥ", "ΦΜΥ"), format="%.2f", key=f"fmy_{tab_key}")
-        v_net = c7.number_input("Καθαρές Αποδοχές", value=dget_val("Καθαρές", "Καθαρές"), format="%.2f", key=f"net_{tab_key}")
+        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=get_val("Σύνολο_Εισφ", "Σύνολο_Εισφ"), format="%.2f", key=f"sum_eisf_{tab_key}")
+        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=get_val("ΦΜΥ", "ΦΜΥ"), format="%.2f", key=f"fmy_{tab_key}")
+        v_net = c7.number_input("Καθαρές Αποδοχές", value=get_val("Καθαρές", "Καθαρές"), format="%.2f", key=f"net_{tab_key}")
     
         st.markdown("---")
         c8, c9 = st.columns(2)
         # Προσοχή: Το disabled widget δεν χρειάζεται key συνήθως, αλλά αν δημιουργεί θέμα, πρόσθεσε ένα
         c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_main_input, format="%.2f", disabled=True, key=f"total_ap_{tab_key}")
-        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=dget_val("ΟΠΣΚΕ", "ΟΠΣΚΕ"), format="%.2f", key=f"opske_{tab_key}")
+        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=get_val("ΟΠΣΚΕ", "ΟΠΣΚΕ"), format="%.2f", key=f"opske_{tab_key}")
     
         return v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske
 
