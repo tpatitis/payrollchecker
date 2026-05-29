@@ -327,6 +327,10 @@ elif page == "2. Checklist ανά Έργο":
             results.append({"ΑΦΜ": selected_afm, "Εγγραφο": doc, "Κατάσταση": status, "Σχόλιο": note})
             
         st.markdown("<br>", unsafe_allow_html=True)
+        # Υπολογισμός συνολικών για την αποθήκευση
+        v_total_ap = v_tak_ap + v_doro_pasxa + v_doro_xrist + v_epidoma_ad
+        v_yp_ap = 0.0  # Αν δεν τα χρησιμοποιείς πια
+        v_loip_ap = 0.0
         
         if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
             check_df = check_df[check_df['ΑΦΜ'] != selected_afm]
