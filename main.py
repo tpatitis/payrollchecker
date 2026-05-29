@@ -202,7 +202,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
 
             # Κλήση του μοντέλου Gemini 2.5 Flash (Ιδανικό για Multimodal εργασίες και Structured Output)
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-1.5-flash',
                 contents=[file_part, prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
