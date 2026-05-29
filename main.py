@@ -138,122 +138,65 @@ elif page == "2. Checklist ανά Έργο":
 
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Έλεγχος Υπαλλήλων & Οικονομικά Στοιχεία")
+    st.header("👤 Έλεγχος Υπαλλήλων")
     projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
-    
     if projects_df.empty:
         st.warning("⚠️ Προσθέστε επιχείρηση στο Στάδιο 1.")
     else:
-        # Διάταξη: Αριστερά οι επιλογές φίλτρων, δεξιά η φόρμα νέου υπαλλήλου
-        col_l, col_r = st.columns([1, 1.2], gap="large")
-        
+        col_l, col_r = st.columns([1, 1.2])
         with col_l:
-            st.subheader("⚙️ Φίλτρα Αναζήτησης")
             sel_p = st.selectbox("Επιχείρηση:", projects_df['Επωνυμία'])
-            # Μετατροπή σε καθαρό String χωρίς κενά
-            s_afm = str(projects_df[projects_df['Επωνυμία'] == sel_p]['ΑΦΜ'].iloc[0]).strip()
-            
+            s_afm = str(projects_df[projects_df['Επωνυμία'] == sel_p]['ΑΦΜ'].iloc[0])
             m_c, y_c = st.columns(2)
             month = m_c.selectbox("Μήνας:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
             year = y_c.selectbox("Έτος:", ["2024", "2025", "2026"], index=1)
             period = f"{month} {year}"
         
         with col_r:
-            st.subheader("➕ Προσθήκη Νέου Υπαλλήλου")
-            with st.form("employee_form", clear_on_submit=True):
-                e_name = st.text_input("Ονοματεπώνυμο")
-                c_a, c_m = st.columns(2)
-                e_afm = c_a.text_input("ΑΦΜ Υπαλλήλου", max_chars=9)
-                e_amka = c_m.text_input("ΑΜΚΑ Υπαλλήλου", max_chars=11)
-                
-                submit_emp = st.form_submit_button("📥 Καταχώρηση Υπαλλήλου", use_container_width=True)
-                
-                if submit_emp:
-                    if not e_name or not e_afm:
-                        st.error("⚠️ Το Ονοματεπώνυμο και το ΑΦΜ είναι υποχρεωτικά!")
-                    else:
-                        edf = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
-                        
-                        # Σιγουρεύουμε ότι αποθηκεύεται ως καθαρό String χωρίς κενά
-                        new_emp = pd.DataFrame([{
-                            "ΑΦΜ_Εργου": str(s_afm).strip(), 
-                            "Ονοματεπώνυμο": str(e_name).strip(), 
-                            "ΑΦΜ_Υπαλλήλου": str(e_afm).strip(), 
-                            "ΑΜΚΑ_Υπαλλήλου": str(e_amka).strip()
-                        }])
-                        
-                        save_to_csv(pd.concat([edf, new_emp], ignore_index=True), EMPLOYEES_FILE)
-                        st.success(f"✅ Ο υπάλληλος {e_name} καταχωρήθηκε!")
-                        st.rerun()
+            st.subheader("➕ Προσθήκη Υπαλλήλου")
+            e_name = st.text_input("Ονοματεπώνυμο")
+            c_a, c_m = st.columns(2)
+            e_afm = c_a.text_input("ΑΦΜ", max_chars=9)
+            e_amka = c_m.text_input("ΑΜΚΑ", max_chars=11)
+            if st.button("Καταχώρηση Υπαλλήλου"):
+                edf = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
+                save_to_csv(pd.concat([edf, pd.DataFrame([{"ΑΦΜ_Εργου": s_afm, "Ονοματεπώνυμο": e_name, "ΑΦΜ_Υπαλλήλου": e_afm, "ΑΜΚΑ_Υπαλλήλου": e_amka}])], ignore_index=True), EMPLOYEES_FILE)
+                st.rerun()
 
         st.divider()
-        
-        # Φόρτωση και αυστηρή μετατροπή στηλών σε String για σωστό φιλτράρισμα
         all_e = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
-        all_e['ΑΦΜ_Εργου'] = all_e['ΑΦΜ_Εργου'].astype(str).str.strip()
-        
-        # Φιλτράρισμα με βάση το ΑΦΜ της επιλεγμένης επιχείρησης
-        c_emps = all_e[all_e['ΑΦΜ_Εργου'] == s_afm]
+        c_emps = all_e[all_e['ΑΦΜ_Εργου'].astype(str) == s_afm]
         e_list = c_emps.apply(lambda x: f"{x['Ονοματεπώνυμο']} (ΑΦΜ: {x['ΑΦΜ_Υπαλλήλου']})", axis=1).tolist()
 
-        if not e_list:
-            st.info("💡 Η λίστα υπαλλήλων είναι κενή για αυτή την επιχείρηση. Προσθέστε έναν υπάλληλο παραπάνω.")
-        else:
-            sel_e = st.selectbox("🔍 Επιλέξτε Υπάλληλο για Έλεγχο:", ["---"] + e_list)
-            
+        if e_list:
+            sel_e = st.selectbox("🔍 Επιλέξτε Υπάλληλο:", ["---"] + e_list)
             if sel_e != "---":
-                e_afm_val = sel_e.split("(ΑΦΜ: ")[1].replace(")", "").strip()
-                emp_data = c_emps[c_emps['ΑΦΜ_Υπαλλήλου'].astype(str).str.strip() == e_afm_val].iloc[0]
+                e_afm_val = sel_e.split("(ΑΦΜ: ")[1].replace(")", "")
+                emp_data = c_emps[c_emps['ΑΦΜ_Υπαλλήλου'].astype(str) == e_afm_val].iloc[0]
                 f_key = f"FIN_{s_afm}_{e_afm_val}_{period}"
                 
-                # Εμφάνιση ΑΜΚΑ υπαλλήλου στην οθόνη
-                st.info(f"📋 **Επιλεγμένος Υπάλληλος:** {emp_data['Ονοματεπώνυμο']} | **ΑΜΚΑ:** {emp_data['ΑΜΚΑ_Υπαλλήλου']} | **Περίοδος:** {period}")
+                st.write(f"📌 **ΑΜΚΑ Υπαλλήλου:** {emp_data['ΑΜΚΑ_Υπαλλήλου']}")
                 
-                # Upload αρχείου και AI επεξεργασία
-                up_pay = st.file_uploader("📂 Ανέβασμα Μισθοδοτικής (AI Ανάλυση)", type=['png', 'jpg', 'jpeg', 'pdf'])
+                up_pay = st.file_uploader("📂 Ανέβασμα Μισθοδοτικής (AI Ανάλυση)", type=['png', 'jpg', 'pdf'])
                 ocr_data = {}
                 if up_pay:
-                    with st.spinner("🤖 Το AI διαβάζει τη μισθοδοτική..."):
+                    with st.spinner("🤖 Το AI διαβάζει τα ποσά..."):
                         ocr_data = extract_payroll_with_ai(up_pay)
-                        if ocr_data:
-                            st.success("✅ Η ανάλυση από το AI ολοκληρώθηκε!")
 
-                # Φόρτωση οικονομικών στοιχείων από το αρχείο
                 f_df = load_data(FINANCIALS_FILE, ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Σύνολο_Αποδ", "ΟΠΣΚΕ"])
                 ext = f_df[f_df['ID_Κλειδί'] == f_key]
-                
-                def get_v(k): 
-                    return float(ext[k].iloc[0]) if not ext.empty else ocr_data.get(k, 0.0)
+                def get_v(k): return float(ext[k].iloc[0]) if not ext.empty else ocr_data.get(k, 0.0)
 
-                # Φόρμα εμφάνισης και επεξεργασίας ποσών
-                st.subheader("💰 Ανάλυση Ποσών")
-                c1, c2 = st.columns(2)
-                v1 = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=get_v("ΙΚΑ_Εργ"), format="%.2f")
-                v2 = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=get_v("ΙΚΑ_Εργοδ"), format="%.2f")
+                c1, c2 = st.columns(2); v1 = c1.number_input("ΙΚΑ Εργαζ.", value=get_v("ΙΚΑ_Εργ")); v2 = c2.number_input("ΙΚΑ Εργοδ.", value=get_v("ΙΚΑ_Εργοδ"))
+                c3, c4 = st.columns(2); v3 = c3.number_input("ΤΕΚΑ Εργαζ.", value=get_v("ΤΕΚΑ_Εργ")); v4 = c4.number_input("ΤΕΚΑ Εργοδ.", value=get_v("ΤΕΚΑ_Εργοδ"))
+                c5, c6, c7 = st.columns(3); v5 = c5.number_input("Σύν. Εισφορών", value=get_v("Σύνολο_Εισφ")); v6 = c6.number_input("ΦΜΥ", value=get_v("ΦΜΥ")); v7 = c7.number_input("Καθαρές Αποδ.", value=get_v("Καθαρές"))
+                c8, c9, c10 = st.columns(3); v8 = c8.number_input("Σύνολο Αποδοχών", value=get_v("Σύνολο_Αποδ")); v9 = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=get_v("ΟΠΣΚΕ"))
                 
-                c3, c4 = st.columns(2)
-                v3 = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=get_v("ΤΕΚΑ_Εργ"), format="%.2f")
-                v4 = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=get_v("ΤΕΚΑ_Εργοδ"), format="%.2f")
-
-                c5, c6, c7 = st.columns(3)
-                v5 = c5.number_input("Σύνολο Ασφαλιστικών Εισφορών", value=get_v("Σύνολο_Εισφ"), format="%.2f")
-                v6 = c6.number_input("ΦΜΥ (Φόρος)", value=get_v("ΦΜΥ"), format="%.2f")
-                v7 = c7.number_input("Καθαρές Αποδοχές (Πληρωτέο)", value=get_v("Καθαρές"), format="%.2f")
-
-                c8, c9, c10 = st.columns(3)
-                v8 = c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=get_v("Σύνολο_Αποδ"), format="%.2f")
-                v9 = c9.number_input("Αιτούμενο Ποσό ΟΠΣΚΕ", value=get_v("ΟΠΣΚΕ"), format="%.2f")
-                
-                # Μαθηματικός Έλεγχος (Καθαρές + Εισφορές + ΦΜΥ)
                 calc = v7 + v5 + v6
-                c10.metric("Έλεγχος Αθροίσματος", f"{calc:,.2f} €")
+                c10.metric("Έλεγχος", f"{calc:,.2f} €")
                 
-                if st.button("💾 Αποθήκευση Οικονομικών Στοιχείων", use_container_width=True):
-                    row = {
-                        "ID_Κλειδί": f_key, "ΙΚΑ_Εργ": v1, "ΙΚΑ_Εργοδ": v2, 
-                        "ΤΕΚΑ_Εργ": v3, "ΤΕΚΑ_Εργοδ": v4, "Σύνολο_Εισφ": v5, 
-                        "ΦΜΥ": v6, "Καθαρές": v7, "Σύνολο_Αποδ": v8, "ΟΠΣΚΕ": v9
-                    }
+                if st.button("💾 Αποθήκευση Οικονομικών", use_container_width=True):
+                    row = {"ID_Κλειδί": f_key, "ΙΚΑ_Εργ": v1, "ΙΚΑ_Εργοδ": v2, "ΤΕΚΑ_Εργ": v3, "ΤΕΚΑ_Εργοδ": v4, "Σύνολο_Εισφ": v5, "ΦΜΥ": v6, "Καθαρές": v7, "Σύνολο_Αποδ": v8, "ΟΠΣΚΕ": v9}
                     f_df = pd.concat([f_df[f_df['ID_Κλειδί'] != f_key], pd.DataFrame([row])], ignore_index=True)
                     save_to_csv(f_df, FINANCIALS_FILE)
-                    st.toast("✅ Τα οικονομικά στοιχεία αποθηκεύτηκαν!")
+                    st.success("Αποθηκεύτηκε!")
