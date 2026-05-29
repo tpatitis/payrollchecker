@@ -32,16 +32,19 @@ def load_data(filename, columns):
 def save_to_csv(df, filename):
     df.to_csv(filename, index=False, encoding='utf-8-sig')
 
-# --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (STRUCTURED OUTPUT SCHEMA & AI OCR) ---
+# --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (ΑΝΑΝΕΩΜΕΝΟ SCHEMA) ---
 class PayrollFinancials(BaseModel):
-    ΙΚΑ_Εργ: float = Field(description="Οι κρατήσεις ή εισφορές του ασφαλισμένου/εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Μην το μπερδεύεις με τις εργοδοτικές εισφορές.")
-    ΙΚΑ_Εργοδ: float = Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Αναγράφονται συνήθως ως 'Εργοδοτικές Εισφορές' ή 'Εισφορές Εργοδότη'.")
-    ΤΕΚΑ_Εργ: float = Field(description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ (επικουρικό). Αν δεν υπάρχει ξεχωριστή γραμμή για ΤΕΚΑ, βάλε 0.0.")
-    ΤΕΚΑ_Εργοδ: float = Field(description="Οι εισφορές του εργοδότη για το ΤΕΚΑ. Αν δεν υπάρχει ξεχωριστή γραμμή, βάλε 0.0.")
-    Σύνολο_Εισφ: float = Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου ή/και εργοδότη. Αν αναγράφεται 'Σύνολο Κρατήσεων' ή 'Σύνολο Εισφορών', πάρε αυτό το ποσό.")
-    ΦΜΥ: float = Field(description="Ο Φόρος Μισθωτών Υπηρεσιών. Αναγράφεται ως Φ.Μ.Υ. ή 'Φόρος'. Αν δεν υπάρχει παρακράτηση φόρου, βάλε 0.0.")
-    Καθαρές: float = Field(description="Το τελικό ποσό που μπαίνει στην τράπεζα στον υπάλληλο. Αναγράφεται ως 'Πληρωτέο', 'Καθαρό Πληρωτέο' ή 'Καθαρές Αποδοχές'.")
-    Σύνολο_Αποδ: float = Field(description="Οι μικτές αποδοχές του υπάλληλου πριν αφαιρεθούν οι κρατήσεις και ο φόρος. Αναγράφεται ως 'Μικτά', 'Σύνολο Αποδοχών' ή 'Τακτικές Αποδοχές'.")
+    ΙΚΑ_Εργ: float = Field(description="Οι κρατήσεις ή εισφορές του ασφαλισμένου/εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ).")
+    ΙΚΑ_Εργοδ: float = Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ).")
+    ΤΕΚΑ_Εργ: float = Field(description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ. Αν δεν υπάρχει, βάλε 0.0.")
+    ΤΕΚΑ_Εργοδ: float = Field(description="Οι εισφορές του εργοδότη για το ΤΕΚΑ. Αν δεν υπάρχει, βάλε 0.0.")
+    Σύνολο_Εισφ: float = Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών.")
+    ΦΜΥ: float = Field(description="Ο Φόρος Μισθωτών Υπηρεσιών (Φ.Μ.Υ.). Αν δεν υπάρχει, βάλε 0.0.")
+    Καθαρές: float = Field(description="Το τελικό πληρωτέο ποσό στον εργαζόμενο (Καθαρές Αποδοχές).")
+    Τακτικές_Αποδ: float = Field(description="Οι βασικές/τακτικές μικρές αποδοχές του υπαλλήλου.")
+    Υπερωρίες: float = Field(description="Αμοιβή για υπερωρίες ή υπερεργασία. Αν δεν υπάρχει, βάλε 0.0.")
+    Λοιπά_Αποδ: float = Field(description="Λοιπά επιδόματα, bonus ή αναδρομικά. Αν δεν υπάρχει, βάλε 0.0.")
+    Σύνολο_Αποδ: float = Field(description="Το συνολικό μικτό ποσό (Άθροισμα Τακτικών, Υπερωριών και Λοιπών).")
     ΟΠΣΚΕ: float = Field(description="Αιτούμενο ποσό ΟΠΣΚΕ. Αν δεν προκύπτει αυτόματα, βάλε 0.0.")
 
 def extract_financials_with_ai_stage3(uploaded_file, emp_name):
@@ -71,10 +74,8 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         ΑΥΣΤΗΡΟΙ ΚΑΝΟΝΕΣ:
         1. ΠΡΟΥΠΟΘΕΣΗ ΟΝΟΜΑΤΟΣ: Αν το όνομα "{emp_name}" ΔΕΝ αναγράφεται πουθενά μέσα στο έγγραφο, τότε ΜΗΝ ΕΞΑΓΕΙΣ ΚΑΝΕΝΑ ΠΟΣΟ. Βάλε παντού 0.0.
         2. ΜΟΝΟ ΑΤΟΜΙΚΑ ΣΤΟΙΧΕΙΑ: Βρες τη γραμμή ή το τμήμα που αντιστοιχεί στον "{emp_name}" και πάρε ΜΟΝΟ τα δικά του ποσά. 
-        3. ΑΓΝΟΗΣΕ ΓΕΝΙΚΑ ΣΥΝΟΛΑ: Μην πάρεις ποτέ τα συνολικά αθροίσματα της επιχείρησης.
-        4. Μην μπερδεύεις τις στήλες 'Αποδοχές', 'Κρατήσεις' και 'Εργοδοτικές Εισφορές'.
-        5. Το 'Καθαρές' είναι ΠΑΝΤΑ το πληρωτέο ποσό στον εργαζόμενο.
-        6. Το 'Σύνολο_Αποδ' είναι οι συνολικές μικτές αποδοχές του συγκεκριμένου υπαλλήλου.
+        3. ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ: Ξεχώρισε τις Τακτικές Αποδοχές, τις Υπερωρίες και τα Λοιπά επιδόματα αν υπάρχουν διακριτά στο έγγραφο.
+        4. Το 'Καθαρές' είναι ΠΑΝΤΑ το πληρωτέο ποσό στον εργαζόμενο.
         """
 
         response = client.models.generate_content(
@@ -90,6 +91,115 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     except Exception as e:
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
+
+def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
+    """Συνάρτηση σχεδίασης του UI για το Στάδιο 3"""
+    
+    # --- ΕΛΕΓΧΟΣ ΔΙΚΑΙΟΛΟΓΗΤΙΚΩΝ ---
+    audit_df = load_data(PAYROLL_CHECKS_FILE, ["ID_Κλειδί", "Έγγραφο", "Κατάσταση", "Σχόλιο"])
+    if not audit_df.empty:
+        audit_df['Σχόλιο'] = audit_df['Σχόλιο'].fillna('').astype(str).str.replace('nan', '', case=False)
+    
+    all_results = []
+    def draw_row(label, key_id):
+        existing = audit_df[audit_df['ID_Κλειδί'] == key_id]
+        c1, c2, c3 = st.columns([1.5, 1, 2], gap="small")
+        c1.markdown(f"<div style='font-size:0.85rem; padding-top:5px;'>{label}</div>", unsafe_allow_html=True)
+        stat = c2.selectbox("", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(existing['Κατάσταση'].iloc[0]) if not existing.empty else 0, key=f"s_{key_id}", label_visibility="collapsed")
+        
+        val_note = existing['Σχόλιο'].iloc[0] if not existing.empty else ""
+        if val_note.lower() == 'nan':
+            val_note = ""
+            
+        note = c3.text_input("", value=val_note, key=f"n_{key_id}", label_visibility="collapsed", placeholder="Σχόλιο...")
+        return {"ID_Κλειδί": key_id, "Έγγραφο": label, "Κατάσταση": stat, "Σχόλιο": note}
+
+    st.caption("📌 ΚΕΝΤΡΙΚΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ")
+    all_results.append(draw_row("Αναγγελία Πρόσληψης (Ε3)", f"PERM_{selected_afm}_{emp_data['ΑΦΜ']}_E3"))
+    all_results.append(draw_row("Ταυτότητα Εργαζομένου", f"PERM_{selected_afm}_{emp_data['ΑΦΜ']}_ID"))
+    st.caption(f"📅 ΜΗΝΙΑΙΑ ΠΑΡΑΔΟΤΕΑ ({period})")
+    for md in ["Extrait", "Έμβασμα Πληρωμής", "Λογιστικό άρθρο καταχώρησης", "Λογιστικό άρθρο πληρωμής", "Βιβλίο εσόδων-εξόδων"]:
+        all_results.append(draw_row(md, f"MONTH_{selected_afm}_{emp_data['ΑΦΜ']}_{period}_{md}"))
+
+    # --- ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI OCR ---
+    st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
+    st.subheader("💰 Οικονομικά Στοιχεία")
+    
+    uploaded_file = st.file_uploader("📂 Μεταφορτώστε τη Μισθοδοτική", type=['png', 'jpg', 'jpeg', 'pdf'], key=f"up_{fin_key}")
+    
+    # Προσθήκη των νέων στηλών στη λίστα φορτώματος
+    fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Τακτικές_Αποδ", "Υπερωρίες", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
+    fin_df = load_data(FINANCIALS_FILE, fin_cols)
+    ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
+    
+    default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_cols if k != "ID_Κλειδί"}
+    
+    if uploaded_file is not None:
+        file_fingerprint = f"{uploaded_file.name}_{uploaded_file.size}"
+        trigger_key = f"ocr_data_{fin_key}_{file_fingerprint}"
+        
+        if st.button("🤖 Έναρξη Ανάλυσης AI", type="primary", use_container_width=True):
+            with st.spinner("⏳ Το AI μελετά το έγγραφο μισθοδοσίας..."):
+                ocr_data = extract_financials_with_ai_stage3(uploaded_file, emp_data['Ονοματεπώνυμο'])
+                if ocr_data:
+                    st.session_state[trigger_key] = ocr_data
+                    st.success("🎯 Η ανάλυση ολοκληρώθηκε!")
+        
+        if trigger_key in st.session_state:
+            for k, v in st.session_state[trigger_key].items():
+                if k in default_values:
+                    default_values[k] = v
+
+    c1, c2 = st.columns(2)
+    v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f")
+    v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=default_values["ΙΚΑ_Εργοδ"], format="%.2f")
+    
+    c3, c4 = st.columns(2)
+    v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργ"], format="%.2f")
+    v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργοδ"], format="%.2f")
+    
+    c5, c6, c7 = st.columns(3)
+    v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=default_values["Σύνολο_Εισφ"], format="%.2f")
+    v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f")
+    v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f")
+    
+    # --- ΝΕΟ: ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΣΤΟ UI ---
+    st.markdown("<p style='font-size:0.9rem; color:#666; margin-bottom:2px;'>Ανάλυση Αποδοχών</p>", unsafe_allow_html=True)
+    col_ap1, col_ap2, col_ap3 = st.columns(3)
+    v_tak_ap = col_ap1.number_input("Τακτικές Αποδοχές", value=default_values["Τακτικές_Αποδ"], format="%.2f")
+    v_yp_ap = col_ap2.number_input("Υπερωρίες / Υπερεργασία", value=default_values["Υπερωρίες"], format="%.2f")
+    v_loip_ap = col_ap3.number_input("Λοιπά Επιδόματα / Bonus", value=default_values["Λοιπά_Αποδ"], format="%.2f")
+    
+    # Το Σύνολο Αποδοχών υπολογίζεται αυτόματα από το άθροισμα των 3 παραπάνω
+    v_total_ap = v_tak_ap + v_yp_ap + v_loip_ap
+    
+    c8, c9, c10 = st.columns(3)
+    c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_total_ap, format="%.2f", disabled=True, help="Υπολογίζεται αυτόματα ως άθροισμα των Τακτικών, Υπερωριών και Λοιπών.")
+    v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=default_values["ΟΠΣΚΕ"], format="%.2f")
+    
+    calc_total = v_net + v_sum_eisf + v_fmy
+    c10.markdown(f"<div style='background-color:#e8f5e9; padding:10px; border-radius:5px; border:1px solid #4caf50; text-align:center; margin-top:15px;'><small>Έλεγχος Αθροίσματος</small><br><b>{calc_total:,.2f} €</b></div>", unsafe_allow_html=True)
+
+    if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
+        new_ks = [r['ID_Κλειδί'] for r in all_results]
+        audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
+        save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
+        
+        # Αποθήκευση μαζί με τις νέες στήλες αναλογίας
+        fin_row = {
+            "ID_Κλειδί": fin_key, "ΙΚΑ_Εργ": v_ika_erg, "ΙΚΑ_Εργοδ": v_ika_ergo, 
+            "ΤΕΚΑ_Εργ": v_teka_erg, "ΤΕΚΑ_Εργοδ": v_teka_ergo, "Σύνολο_Εισφ": v_sum_eisf, 
+            "ΦΜΥ": v_fmy, "Καθαρές": v_net, "Τακτικές_Αποδ": v_tak_ap, "Υπερωρίες": v_yp_ap, 
+            "Λοιπά_Αποδ": v_loip_ap, "Σύνολο_Αποδ": v_total_ap, "ΟΠΣΚΕ": v_opske
+        }
+        fin_df = pd.concat([fin_df[fin_df['ID_Κλειδί'] != fin_key], pd.DataFrame([fin_row])], ignore_index=True)
+        save_to_csv(fin_df, FINANCIALS_FILE)
+        
+        if 'trigger_key' in locals() and trigger_key in st.session_state:
+            del st.session_state[trigger_key]
+            
+        st.success("✅ Τα στοιχεία αποθηκεύτηκαν!")
+        st.rerun()
 
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
     """Συνάρτηση σχεδίασης του UI για το Στάδιο 3"""
