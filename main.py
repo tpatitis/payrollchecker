@@ -28,23 +28,49 @@ def save_to_csv(df, filename):
     df.to_csv(filename, index=False, encoding='utf-8-sig')
 
 def extract_financials_with_ai(uploaded_file, employee_name):
-    """ Εικονική συνάρτηση AI προσομοίωσης - Αντικαταστήστε με τον δικό σας μηχανισμό LLM/OCR """
-    return {
-        "Περίοδος_Εγγράφου": "ΜΑΪΟΣ 2026",
-        "Τακτικές_Αποδοχές": 1200.00,
-        "Δώρο_Πάσχα": 400.00,
-        "Δώρο_Χριστουγέννων": 0.00,
-        "Επίδομα_Άδειας": 0.00,
-        "Σύνολο_Αποδ": 1600.00,
-        "ΙΚΑ_Εργ": 160.00,
-        "ΙΚΑ_Εργοδ": 250.00,
-        "ΤΕΚΑ_Εργ": 15.00,
-        "ΤΕΚΑ_Εργοδ": 15.00,
-        "Σύνολο_Εισφ": 440.00,
-        "ΦΜΥ": 30.00,
-        "Καθαρές": 1130.00,
-        "ΟΠΣΚΕ": 1200.00
-    }
+    # Έλεγχος αν υπάρχει το API Key στα secrets
+    if "GEMINI_API_KEY" not in st.secrets:
+        st.error("❌ Δεν βρέθηκε το 'GEMINI_API_KEY' στα Streamlit Secrets! Παρακαλώ ρυθμίστε το στο αρχείο .streamlit/secrets.toml")
+        return None
+    
+    try:
+        # Αρχικοποίηση του νέου GenAI Client
+        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+        
+        # Διάβασμα των bytes του αρχείου
+        file_bytes = uploaded_file.read()
+        mime_type = uploaded_file.type
+        
+        # Προετοιμασία του αρχείου ως inline data για το API
+        document_part = types.Part.from_bytes(
+            data=file_bytes,
+            mime_type=mime_type
+        )
+        
+        prompt = f"""
+        Είσαι ένας έμπειρος Έλληνας λογιστής και ελεγκτής μισθοδοσίας. 
+        Μελέτησε προσεκτικά την επισυναπτόμενη απόδειξη μισθοδοσίας/έντυπο για τον υπάλληλο με όνομα "{employee_name}".
+        Εξήγαγε όλα τα οικονομικά μεγέθη και τις κρατήσεις που ζητούνται στο σχήμα. 
+        Σιγουρέψου ότι μετατρέπεις όλα τα ποσά σε αριθμούς (float) και αν κάποιο πεδίο λείπει, βάλε 0.0.
+        """
+        
+        # Κλήση του μοντέλου gemini-2.5-flash με απαίτηση για δομημένο JSON βάσει του Pydantic Schema
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[document_part, prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=PayrollData,
+                temperature=0.1,  # Χαμηλό temperature για μέγιστη ακρίβεια στα νούμερα
+            ),
+        )
+        
+        # Μετατροπή του string JSON σε python dictionary
+        return json.loads(response.text)
+        
+    except Exception as e:
+        st.error(f"❌ Σφάλμα κατά την ανάλυση του εγγράφου από το AI: {str(e)}")
+        return None
 
 # --- ΣΤΑΔΙΟ 3: ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI ΑΝΑΛΥΣΗ ---
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
