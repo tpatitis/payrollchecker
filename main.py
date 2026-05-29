@@ -335,7 +335,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     def render_financial_fields(tab_key, default_values, ocr_data):
 
-    """Συνάρτηση που αποδίδει τα πεδία εισαγωγής με λογική AI ή Default"""
+
 
     
 
