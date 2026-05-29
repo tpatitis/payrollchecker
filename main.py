@@ -22,8 +22,8 @@ PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 
 # --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
 def load_data(filename, columns):
-    if not os.path.isfile(filename) or os.path.getsize(filename) == 0:
-        return pd.DataFrame(columns=columns)
+    if not os.path.isfile(filename) or os.path.getsize(filename) == 0:
+        return pd.DataFrame(columns=columns)
     try:
         return pd.read_csv(filename)
     except Exception:
