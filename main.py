@@ -172,9 +172,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
   # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
     st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Αναλυτικά Στοιχεία ανά Κατηγορία</p>", unsafe_allow_html=True)
     
-    # Βοηθητική συνάρτηση για τα πεδία που εμφανίζονται σε κάθε tab
-    def render_financial_fields(tab_key, default_values, ocr_data):
-    """Συνάρτηση που αποδίδει τα πεδία εισαγωγής με λογική AI ή Default"""
+    
     
     def get_val(key_name, default_key):
         # Αν υπάρχει στο OCR, επιστρέφει το OCR, αλλιώς το default
