@@ -86,9 +86,10 @@ elif page == "2. Checklist ανά Έργο":
         
         check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
         
-        # Εξασφαλίζουμε ότι η στήλη ΑΦΜ στο αρχείο διαβάζεται σωστά ως κείμενο
+        # ΔΙΟΡΘΩΣΗ 1: Μετατροπή σε κείμενο και αντικατάσταση των 'nan' με κενό
         if not check_df.empty:
             check_df['ΑΦΜ'] = check_df['ΑΦΜ'].astype(str).str.strip()
+            check_df['Σχόλιο'] = check_df['Σχόλιο'].fillna('').astype(str).str.replace('nan', '', case=False)
             
         required_docs = [
             "Πίνακας Προσωπικού Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", 
@@ -99,6 +100,12 @@ elif page == "2. Checklist ανά Έργο":
             "Προσωρινές δηλώσεις ΦΜΥ"
         ]
         
+        # Εμφάνιση σταθερού μηνύματος επιτυχίας αν έχει γίνει αποθήκευση
+        if f"success_{selected_afm}" in st.session_state:
+            st.success(f"✅ Το checklist για την επιχείρηση '{selected_name}' αποθηκεύτηκε επιτυχώς!")
+            # Διαγράφουμε το state για να μην εμφανίζεται για πάντα αν αλλάξει σελίδα
+            del st.session_state[f"success_{selected_afm}"]
+        
         results = []
         for doc in required_docs:
             # Φιλτράρισμα βάσει του συγκεκριμένου ΑΦΜ
@@ -107,7 +114,6 @@ elif page == "2. Checklist ανά Έργο":
             c1, c2, c3 = st.columns([1.5, 1.0, 2.5], gap="small")
             c1.markdown(f"<div style='font-size:0.85rem; padding-top:5px;'><b>{doc}</b></div>", unsafe_allow_html=True)
             
-            # ΔΙΟΡΘΩΣΗ: Προσθήκη του selected_afm στο key για να είναι μοναδικό ανά επιχείρηση
             status = c2.selectbox(
                 "", 
                 ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], 
@@ -116,25 +122,32 @@ elif page == "2. Checklist ανά Έργο":
                 label_visibility="collapsed"
             )
             
-            # ΔΙΟΡΘΩΣΗ: Προσθήκη του selected_afm στο key του text_input
+            # Ανάκτηση σχολίου και σιγουριά ότι δεν είναι nan
+            val_note = existing['Σχόλιο'].iloc[0] if not existing.empty else ""
+            if val_note.lower() == 'nan':
+                val_note = ""
+                
             note = c3.text_input(
                 "", 
-                value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", 
+                value=val_note, 
                 key=f"gen_n_{selected_afm}_{doc}", 
                 label_visibility="collapsed",
-                placeholder="Σχόλιο..."
+                placeholder="Σημειώσεις..."
             )
             
             results.append({"ΑΦΜ": selected_afm, "Εγγραφο": doc, "Κατάσταση": status, "Σχόλιο": note})
             
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        # ΔΙΟΡΘΩΣΗ 2: Κουμπί αποθήκευσης με ξεκάθαρο μήνυμα επιτυχίας
         if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
             # Κρατάμε τις υπόλοιπες επιχειρήσεις και αντικαθιστούμε μόνο την τρέχουσα
             check_df = check_df[check_df['ΑΦΜ'] != selected_afm]
             save_to_csv(pd.concat([check_df, pd.DataFrame(results)], ignore_index=True), CHECKLIST_FILE)
-            st.success(f"✅ Το checklist για την επιχείρηση '{selected_name}' αποθηκεύτηκε επιτυχώς!")
+            
+            # Αποθηκεύουμε την επιτυχία στο session_state πριν το rerun
+            st.session_state[f"success_{selected_afm}"] = True
             st.rerun()
-
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
     st.header("👤 Διαχείριση & Έλεγχος Υπαλλήλων")
