@@ -198,136 +198,98 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, all
         else:
             st.success(f"✅ Η περίοδος του εγγράφου επαληθεύτηκε επιτυχώς: **{current_doc_period}**")
 
-    # Εμφάνιση περιόδου (συνδεδεμένη με το session_state)
-    st.text_input(
-        "📅 Περίοδος που αναγράφεται στο έγγραφο (AI Εύρημα)", 
-        value=st.session_state[f"val_{fin_key}_Περίοδος_Εγγράφου"], 
-        key=f"input_period_doc_{fin_key}"
-    )
-    st.session_state[f"val_{fin_key}_Περίοδος_Εγγράφου"] = st.session_state[f"input_period_doc_{fin_key}"]
-    
-    st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
-    
-    # 6. 🔄 ΜΕΝΟΥ ΕΠΙΛΟΓΗΣ ΕΙΔΟΥΣ ΑΠΟΔΟΧΩΝ (Η αλλαγή εδώ εμφανίζει αυτόματα τα σωστά ποσά)
-    type_of_payroll = st.selectbox(
-        "📊 Επιλέξτε Είδος Αποδοχών για προβολή/καταχώρηση:",
-        ["Τακτικές Αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα Άδειας"],
-        key=f"select_type_{fin_key}"
-    )
+    # Σχεδίαση της περιόδου του εγγράφου
+                st.text_input("📅 Περίοδος που αναγράφεται στο έγγραφο (AI Εύρημα)", value=default_values["Περίοδος_Εγγράφου"], key="input_period_doc")
+                
+                st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
+                
+                # 🔄 ΜΕΝΟΥ ΕΠΙΛΟΓΗΣ ΕΙΔΟΥΣ ΑΠΟΔΟΧΩΝ
+                type_of_payroll = st.selectbox(
+                    "📊 Επιλέξτε Είδος Αποδοχών για προβολή/καταχώρηση:",
+                    ["Τακτικές Αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα Άδειας"]
+                )
 
-    # Δυναμική εμφάνιση καρτέλας με βάση την επιλογή
-    if type_of_payroll == "Τακτικές Αποδοχές":
-        st.markdown("### 🛠️ Τακτικές Αποδοχές Μήνα")
-        st.number_input(
-            "Μικτές Τακτικές Αποδοχές", 
-            value=float(st.session_state[f"val_{fin_key}_Τακτικές_Αποδοχές"]), 
-            format="%.2f",
-            key=f"num_tak_{fin_key}"
-        )
-        st.session_state[f"val_{fin_key}_Τακτικές_Αποδοχές"] = st.session_state[f"num_tak_{fin_key}"]
+                # Δημιουργία των μεταβλητών με τις αρχικές τιμές από το αρχείο/AI
+                v_tak_ap = float(default_values["Τακτικές_Αποδοχές"])
+                v_d_pasxa = float(default_values["Δώρο_Πάσχα"])
+                v_d_xrist = float(default_values["Δώρο_Χριστουγέννων"])
+                v_epid_ad = float(default_values["Επίδομα_Άδειας"])
+
+                # Εμφάνιση ΜΟΝΟ των πεδίων που αφορούν την επιλογή του χρήστη
+                if type_of_payroll == "Τακτικές Αποδοχές":
+                    st.markdown("### 🛠️ Τακτικές Αποδοχές Μήνα")
+                    v_tak_ap = st.number_input("Μικτές Τακτικές Αποδοχές", value=v_tak_ap, format="%.2f")
+                    
+                elif type_of_payroll == "Δώρο Πάσχα":
+                    st.markdown("### 🌸 Δώρο Πάσχα")
+                    v_d_pasxa = st.number_input("Ποσό Δώρου Πάσχα (Μικτά)", value=v_d_pasxa, format="%.2f")
+                    
+                elif type_of_payroll == "Δώρο Χριστουγέννων":
+                    st.markdown("### 🎄 Δώρο Χριστουγέννων")
+                    v_d_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (Μικτά)", value=v_d_xrist, format="%.2f")
+                    
+                elif type_of_payroll == "Επίδομα Άδειας":
+                    st.markdown("### 🏖️ Επίδομα Άδειας")
+                    v_epid_ad = st.number_input("Ποσό Επιδόματος Άδειας (Μικτά)", value=v_epid_ad, format="%.2f")
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # --- ΚΟΙΝΑ ΣΤΟΙΧΕΙΑ ΚΡΑΤΗΣΕΩΝ & ΦΟΡΩΝ ---
+                # Αυτά τα πεδία παραμένουν κοινά για να ξέρουμε τις συνολικές κρατήσεις της εκάστοτε απόδειξης
+                st.markdown("##### **Κρατήσεις & Ασφαλιστικά (Συνολικά Έντυπου)**")
+                c1, c2 = st.columns(2)
+                v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=float(default_values["ΙΚΑ_Εργ"]), format="%.2f")
+                v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=float(default_values["ΙΚΑ_Εργοδ"]), format="%.2f")
+                
+                c3, c4 = st.columns(2)
+                v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=float(default_values["ΤΕΚΑ_Εργ"]), format="%.2f")
+                v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=float(default_values["ΤΕΚΑ_Εργοδ"]), format="%.2f")
+                
+                st.markdown("##### **Σύνολα & Φόροι**")
+                c5, c6, c7 = st.columns(3)
+                v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=float(default_values["Σύνολο_Εισφ"]), format="%.2f")
+                v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=float(default_values["ΦΜΥ"]), format="%.2f")
+                v_net = c7.number_input("Καθαρές Αποδοχές (Πληρωτέο)", value=float(default_values["Καθαρές"]), format="%.2f")
+                
+                c8, c9 = st.columns(2)
+                v_total_ap = c8.number_input("Σύνολο Μικτών Αποδοχών (Όπως αναγράφεται)", value=float(default_values["Σύνολο_Αποδ"]), format="%.2f")
+                v_opske = c9.number_input("Αιτούμενο Ποσό ΟΠΣΚΕ", value=float(default_values["ΟΠΣΚΕ"]), format="%.2f")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
+                    # 1. Αποθήκευση Checklists
+                    new_ks = [r['ID_Κλειδί'] for r in all_results]
+                    audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
+                    save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
+                    
+                    # 2. Δημιουργία δομής εγγραφής οικονομικών στοιχείων (κάθε ποσό στη δική του στήλη)
+                    fin_row = {
+                        "ID_Κλειδί": fin_key,
+                        "Περίοδος_Εγγράφου": st.session_state.get("input_period_doc", default_values["Περίοδος_Εγγράφου"]),
+                        "Τακτικές_Αποδοχές": v_tak_ap,
+                        "Δώρο_Πάσχα": v_d_pasxa,
+                        "Δώρο_Χριστουγέννων": v_d_xrist,
+                        "Επίδομα_Άδειας": v_epid_ad,
+                        "Σύνολο_Αποδ": v_total_ap,
+                        "ΙΚΑ_Εργ": v_ika_erg,
+                        "ΙΚΑ_Εργοδ": v_ika_ergo,
+                        "ΤΕΚΑ_Εργ": v_teka_erg,
+                        "ΤΕΚΑ_Εργοδ": v_teka_ergo,
+                        "Σύνολο_Εισφ": v_sum_eisf,
+                        "ΦΜΥ": v_fmy,
+                        "Καθαρές": v_net,
+                        "ΟΠΣΚΕ": v_opske
+                    }
+                    
+                    # 3. Ένωση και αποθήκευση στο CSV
+                    fin_df = pd.concat([fin_df[fin_df['ID_Κλειδί'] != fin_key], pd.DataFrame([fin_row])], ignore_index=True)
+                    save_to_csv(fin_df, FINANCIALS_FILE)
+                    
+                    if 'trigger_key' in locals() and trigger_key in st.session_state:
+                        del st.session_state[trigger_key]
+                        
+                    st.session_state[f"success_emp_{fin_key}"] = True
+                    st.rerun()
         
-    elif type_of_payroll == "Δώρο Πάσχα":
-        st.markdown("### 🌸 Δώρο Πάσχα")
-        st.number_input(
-            "Ποσό Δώρου Πάσχα (Μικτά)", 
-            value=float(st.session_state[f"val_{fin_key}_Δώρο_Πάσχα"]), 
-            format="%.2f",
-            key=f"num_pas_{fin_key}"
-        )
-        st.session_state[f"val_{fin_key}_Δώρο_Πάσχα"] = st.session_state[f"num_pas_{fin_key}"]
-        
-    elif type_of_payroll == "Δώρο Χριστουγέννων":
-        st.markdown("### 🎄 Δώρο Χριστουγέννων")
-        st.number_input(
-            "Ποσό Δώρου Χριστουγέννων (Μικτά)", 
-            value=float(st.session_state[f"val_{fin_key}_Δώρο_Χριστουγέννων"]), 
-            format="%.2f",
-            key=f"num_xris_{fin_key}"
-        )
-        st.session_state[f"val_{fin_key}_Δώρο_Χριστουγέννων"] = st.session_state[f"num_xris_{fin_key}"]
-        
-    elif type_of_payroll == "Επίδομα Άδειας":
-        st.markdown("### 🏖️ Επίδομα Άδειας")
-        st.number_input(
-            "Ποσό Επιδόματος Άδειας (Μικτά)", 
-            value=float(st.session_state[f"val_{fin_key}_Επίδομα_Άδειας"]), 
-            format="%.2f",
-            key=f"num_ade_{fin_key}"
-        )
-        st.session_state[f"val_{fin_key}_Επίδομα_Άδειας"] = st.session_state[f"num_ade_{fin_key}"]
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # 7. --- ΚΟΙΝΑ ΣΤΟΙΧΕΙΑ ΚΡΑΤΗΣΕΩΝ & ΦΟΡΩΝ (Πάντα ορατά στο κάτω μέρος) ---
-    st.markdown("##### **Κρατήσεις & Ασφαλιστικά (Συνολικά Έντυπου)**")
-    c1, c2 = st.columns(2)
-    v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=float(st.session_state[f"val_{fin_key}_ΙΚΑ_Εργ"]), format="%.2f", key=f"inp_ika_erg_{fin_key}")
-    st.session_state[f"val_{fin_key}_ΙΚΑ_Εργ"] = v_ika_erg
-
-    v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=float(st.session_state[f"val_{fin_key}_ΙΚΑ_Εργοδ"]), format="%.2f", key=f"inp_ika_ergod_{fin_key}")
-    st.session_state[f"val_{fin_key}_ΙΚΑ_Εργοδ"] = v_ika_ergo
-    
-    c3, c4 = st.columns(2)
-    v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=float(st.session_state[f"val_{fin_key}_ΤΕΚΑ_Εργ"]), format="%.2f", key=f"inp_teka_erg_{fin_key}")
-    st.session_state[f"val_{fin_key}_ΤΕΚΑ_Εργ"] = v_teka_erg
-
-    v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=float(st.session_state[f"val_{fin_key}_ΤΕΚΑ_Εργοδ"]), format="%.2f", key=f"inp_teka_ergod_{fin_key}")
-    st.session_state[f"val_{fin_key}_ΤΕΚΑ_Εργοδ"] = v_teka_ergo
-    
-    st.markdown("##### **Σύνολα & Φόροι**")
-    c5, c6, c7 = st.columns(3)
-    v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=float(st.session_state[f"val_{fin_key}_Σύνολο_Εισφ"]), format="%.2f", key=f"inp_sum_eisf_{fin_key}")
-    st.session_state[f"val_{fin_key}_Σύνολο_Εισφ"] = v_sum_eisf
-
-    v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=float(st.session_state[f"val_{fin_key}_ΦΜΥ"]), format="%.2f", key=f"inp_fmy_{fin_key}")
-    st.session_state[f"val_{fin_key}_ΦΜΥ"] = v_fmy
-
-    v_net = c7.number_input("Καθαρές Αποδοχές (Πληρωτέο)", value=float(st.session_state[f"val_{fin_key}_Καθαρές"]), format="%.2f", key=f"inp_net_{fin_key}")
-    st.session_state[f"val_{fin_key}_Καθαρές"] = v_net
-    
-    c8, c9 = st.columns(2)
-    v_total_ap = c8.number_input("Σύνολο Μικτών Αποδοχών (Όπως αναγράφεται)", value=float(st.session_state[f"val_{fin_key}_Σύνολο_Αποδ"]), format="%.2f", key=f"inp_tot_ap_{fin_key}")
-    st.session_state[f"val_{fin_key}_Σύνολο_Αποδ"] = v_total_ap
-
-    v_opske = c9.number_input("Αιτούμενο Ποσό ΟΠΣΚΕ", value=float(st.session_state[f"val_{fin_key}_ΟΠΣΚΕ"]), format="%.2f", key=f"inp_opske_{fin_key}")
-    st.session_state[f"val_{fin_key}_ΟΠΣΚΕ"] = v_opske
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # 8. --- ΑΠΟΘΗΚΕΥΣΗ ΔΕΔΟΜΕΝΩΝ ---
-    if st.button("💾 Αποθήκευση Όλων", use_container_width=True, key=f"save_btn_{fin_key}"):
-        # Αποθήκευση Checklists
-        new_ks = [r['ID_Κλειδί'] for r in all_results]
-        audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
-        save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
-        
-        # Συλλογή όλων των δεδομένων απευθείας από το session_state
-        fin_row = {
-            "ID_Κλειδί": fin_key,
-            "Περίοδος_Εγγράφου": st.session_state[f"val_{fin_key}_Περίοδος_Εγγράφου"],
-            "Τακτικές_Αποδοχές": st.session_state[f"val_{fin_key}_Τακτικές_Αποδοχές"],
-            "Δώρο_Πάσχα": st.session_state[f"val_{fin_key}_Δώρο_Πάσχα"],
-            "Δώρο_Χριστουγέννων": st.session_state[f"val_{fin_key}_Δώρο_Χριστουγέννων"],
-            "Επίδομα_Άδειας": st.session_state[f"val_{fin_key}_Επίδομα_Άδειας"],
-            "Σύνολο_Αποδ": st.session_state[f"val_{fin_key}_Σύνολο_Αποδ"],
-            "ΙΚΑ_Εργ": st.session_state[f"val_{fin_key}_ΙΚΑ_Εργ"],
-            "ΙΚΑ_Εργοδ": st.session_state[f"val_{fin_key}_ΙΚΑ_Εργοδ"],
-            "ΤΕΚΑ_Εργ": st.session_state[f"val_{fin_key}_ΤΕΚΑ_Εργ"],
-            "ΤΕΚΑ_Εργοδ": st.session_state[f"val_{fin_key}_ΤΕΚΑ_Εργοδ"],
-            "Σύνολο_Εισφ": st.session_state[f"val_{fin_key}_Σύνολο_Εισφ"],
-            "ΦΜΥ": st.session_state[f"val_{fin_key}_ΦΜΥ"],
-            "Καθαρές": st.session_state[f"val_{fin_key}_Καθαρές"],
-            "ΟΠΣΚΕ": st.session_state[f"val_{fin_key}_ΟΠΣΚΕ"]
-        }
-        
-        # Ένωση και αποθήκευση στο CSV
-        fin_df = pd.concat([fin_df[fin_df['ID_Κλειδί'] != fin_key], pd.DataFrame([fin_row])], ignore_index=True)
-        save_to_csv(fin_df, FINANCIALS_FILE)
-        
-        # Καθαρισμός προσωρινών AI keys
-        if 'trigger_key' in locals() and trigger_key in st.session_state:
-            del st.session_state[trigger_key]
-            
-        st.session_state[f"success_emp_{fin_key}"] = True
-        st.success("✅ Τα στοιχεία αποθηκεύτηκαν επιτυχώς!")
-        st.rerun()
+      
