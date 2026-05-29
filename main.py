@@ -16,9 +16,19 @@ EMPLOYEES_FILE = 'data_employees.csv'
 FINANCIALS_FILE = 'payroll_financials.csv'
 
 def load_data(filename, columns):
+    # Ελέγχουμε αν το αρχείο υπάρχει ΚΑΙ αν έχει περιεχόμενο (μέγεθος > 0)
     if not os.path.isfile(filename) or os.path.getsize(filename) == 0:
         return pd.DataFrame(columns=columns)
-    return pd.read_csv(filename)
+    
+    try:
+        df = pd.read_csv(filename)
+        # Αν το αρχείο έχει περιεχόμενο αλλά είναι κατεστραμμένο, επιστρέφουμε κενό df
+        if df.empty:
+            return pd.DataFrame(columns=columns)
+        return df
+    except Exception:
+        # Αν υπάρξει οποιοδήποτε άλλο πρόβλημα, επιστρέφουμε κενό df για να συνεχίσει το app
+        return pd.DataFrame(columns=columns)
 
 def save_to_csv(df, filename):
     df.to_csv(filename, index=False, encoding='utf-8-sig')
