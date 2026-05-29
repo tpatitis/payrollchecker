@@ -61,13 +61,46 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, selected_af
 st.sidebar.title("📑 Μενού")
 page = st.sidebar.radio("Επιλογή:", ["1. Διαχείριση Έργων", "2. Checklist", "3. Μισθοδοσία"])
 
-# --- ΣΤΑΔΙΟ 1 ---
+# --- ΣΤΑΔΙΟ 1: ΔΙΑΧΕΙΡΙΣΗ ΕΡΓΩΝ ---
 if page == "1. Διαχείριση Έργων":
     st.header("🏢 Διαχείριση Επιχειρήσεων")
-    # (Εδώ ο κώδικας για projects)
-    df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
-    st.dataframe(df)
+    
+    with st.expander("➕ Προσθήκη / Επεξεργασία Έργου", expanded=True):
+        with st.form("project_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            name = col1.text_input("Επωνυμία Επιχείρησης")
+            afm = col1.text_input("ΑΦΜ (9 ψηφία)", max_chars=9)
+            mis = col2.text_input("Κωδικός Έργου (MIS)")
+            budget = col2.number_input("Συνολικός Προϋπολογισμός (€)", min_value=0.0)
+            
+            submitted = st.form_submit_button("💾 Αποθήκευση Στοιχείων")
+            
+            if submitted:
+                if name and afm:
+                    # Φόρτωση ή δημιουργία κενού αν δεν υπάρχει
+                    if not os.path.isfile(PROJECTS_FILE):
+                        df = pd.DataFrame(columns=["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"])
+                    else:
+                        df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"])
+                    
+                    # Update ή Append
+                    if afm in df['ΑΦΜ'].astype(str).values:
+                        df.loc[df['ΑΦΜ'].astype(str) == afm, ["Επωνυμία", "MIS", "Προϋπολογισμός"]] = [name, mis, budget]
+                    else:
+                        new_row = pd.DataFrame([{"Επωνυμία": name, "ΑΦΜ": afm, "MIS": mis, "Προϋπολογισμός": budget}])
+                        df = pd.concat([df, new_row], ignore_index=True)
+                    
+                    save_to_csv(df, PROJECTS_FILE)
+                    st.success(f"✅ Η επιχείρηση '{name}' αποθηκεύτηκε!")
+                    st.rerun()
+                else:
+                    st.error("⚠️ Πρέπει να συμπληρώσεις τουλάχιστον Επωνυμία και ΑΦΜ.")
 
+    st.markdown("### 📋 Λίστα Εγγεγραμμένων Επιχειρήσεων")
+    if os.path.isfile(PROJECTS_FILE):
+        df_display = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"])
+        if not df_display.empty:
+            st.dataframe(df_display, use_container_width=True)
 # --- ΣΤΑΔΙΟ 2 ---
 elif page == "2. Checklist":
     st.header("📂 Checklist ανά Έργο")
