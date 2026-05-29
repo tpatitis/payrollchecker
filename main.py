@@ -156,62 +156,60 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
     import pydantic
     import json
 
-    # 1. Ορισμός του JSON Schema μέσω Pydantic (Αναγκάζει το AI να απαντήσει σε αυτή τη δομή)
+    # 1. ΕΝΙΣΧΥΜΕΝΟ SCHEMA: Αναλυτικές οδηγίες στο AI για το τι είναι το κάθε πεδίο
     class PayrollFinancials(pydantic.BaseModel):
-        ΙΚΑ_Εργ: float = pydantic.Field(description="Εισφορές Εργαζομένου ΙΚΑ / Κρατήσεις Ασφαλισμένων ΙΚΑ")
-        ΙΚΑ_Εργοδ: float = pydantic.Field(description="Εισφορές Εργοδότη ΙΚΑ / Εργοδοτικές Εισφορές ΙΚΑ")
-        ΤΕΚΑ_Εργ: float = pydantic.Field(description="Εισφορές Εργαζομένου ΤΕΚΑ / Κρατήσεις ΤΕΚΑ")
-        ΤΕΚΑ_Εργοδ: float = pydantic.Field(description="Εισφορές Εργοδότη ΤΕΚΑ / Εργοδοτικές Εισφορές ΤΕΚΑ")
-        Σύνολο_Εισφ: float = pydantic.Field(description="Σύνολο Ασφαλιστικών Εισφορών ή Συνολικές Κρατήσεις")
-        ΦΜΥ: float = pydantic.Field(description="Φόρος Μισθωτών Υπηρεσιών / Φ.Μ.Υ. / Παρακρατηθείς Φόρος")
-        Καθαρές: float = pydantic.Field(description="Καθαρές Αποδοχές / Πληρωτέο Ποσό / Καθαρό Πληρωτέο")
-        Σύνολο_Αποδ: float = pydantic.Field(description="Σύνολο Αποδοχών / Μικτές Αποδοχές / Τακτικές Αποδοχές")
+        ΙΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις ή εισφορές του ασφαλισμένου/εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Μην το μπερδεύεις με τις εργοδοτικές εισφορές.")
+        ΙΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Αναγράφονται συνήθως ως 'Εργοδοτικές Εισφορές' ή 'Εισφορές Εργοδότη'.")
+        ΤΕΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ (επικουρικό). Αν δεν υπάρχει ξεχωριστή γραμμή για ΤΕΚΑ, βάλε 0.0.")
+        ΤΕΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το ΤΕΚΑ. Αν δεν υπάρχει ξεχωριστή γραμμή, βάλε 0.0.")
+        Σύνολο_Εισφ: float = pydantic.Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου ή/και εργοδότη. Αν αναγράφεται 'Σύνολο Κρατήσεων' ή 'Σύνολο Εισφορών', πάρε αυτό το ποσό.")
+        ΦΜΥ: float = pydantic.Field(description="Ο Φόρος Μισθωτών Υπηρεσιών. Αναγράφεται ως Φ.Μ.Υ. ή 'Φόρος'. Αν δεν υπάρχει παρακράτηση φόρου, βάλε 0.0.")
+        Καθαρές: float = pydantic.Field(description="Το τελικό ποσό που μπαίνει στην τράπεζα στον υπάλληλο. Αναγράφεται ως 'Πληρωτέο', 'Καθαρό Πληρωτέο' ή 'Καθαρές Αποδοχές'.")
+        Σύνολο_Αποδ: float = pydantic.Field(description="Οι μικτές αποδοχές του υπαλλήλου πριν αφαιρεθούν οι κρατήσεις και ο φόρος. Αναγράφεται ως 'Μικτά', 'Σύνολο Αποδοχών' ή 'Τακτικές Αποδοχές'.")
 
     def extract_financials_with_ai(uploaded_file):
         """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
         
-        # ΠΡΟΣΟΧΗ: Αντικατάστησε το 'YOUR_API_KEY' με το πραγματικό σου κλειδί ή βάλε το στο st.secrets
         API_KEY = st.secrets["GEMINI_API_KEY"]
         
-        if not API_KEY or API_KEY == "YOUR_API_KEY":
-            st.error("🔑 Παρακαλώ ορίστε το Google Gemini API Key στον κώδικα.")
+        if not API_KEY:
+            st.error("🔑 Παρακαλώ ορίστε το Google Gemini API Key στα Secrets.")
             return {}
 
         try:
-            # Αρχικοποίηση του επίσημου GenAI Client
             client = genai.Client(api_key=API_KEY)
-            
-            # Διάβασμα των bytes του αρχείου (λειτουργεί για PDF, PNG, JPG, JPEG)
             file_bytes = uploaded_file.read()
             mime_type = uploaded_file.type
             
-            # Προετοιμασία των δεδομένων του αρχείου για το API
             file_part = types.Part.from_bytes(
                 data=file_bytes,
                 mime_type=mime_type,
             )
 
-            # Το Prompt «καθοδηγητής» για το AI
+            # 2. ΕΝΙΣΧΥΜΕΝΟ PROMPT: Αυστηροί λογιστικοί κανόνες ελέγχου
             prompt = """
-            Είσαι ένας έμπειρος Έλληνας λογιστής και ελεγκτής μισθοδοσίας. 
-            Σου δίνεται ένα έγγραφο μισθοδοσίας (απόδειξη, κατάσταση ή PDF). 
-            Μελέτησε προσεκτικά το έγγραφο, εντόπισε τα οικονομικά μεγέθη και εξήγαγε τα ποσά.
-            Αν κάποιο πεδίο δεν αναγράφεται ρητά ή είναι μηδενικό, βάλε 0.0.
-            Προσοχή στις ονομασίες, καθώς διαφορετικά λογιστικά προγράμματα (Epsilon Net, Scan, κλπ) χρησιμοποιούν ελαφρώς διαφορετικούς όρους.
+            Είσαι ένας σχολαστικός Έλληνας λογιστής και ορκωτός ελεγκτής μισθοδοσίας. 
+            Σου δίνεται ένα έγγραφο μισθοδοσίας. Μελέτησε προσεκτικά όλες τις στήλες και τους πίνακες.
+            
+            Ακολουθcode αυστηρά τους εξής κανόνες:
+            1. Μην μπερδεύεις τις στήλες 'Αποδοχές', 'Κρατήσεις' και 'Εργοδοτικές Εισφορές'.
+            2. Το 'Καθαρές' είναι ΠΑΝΤΑ το πληρωτέο ποσό στον εργαζόμενο (αυτό που κατατίθεται στην τράπεζα).
+            3. Το 'Σύνολο_Αποδ' είναι οι συνολικές μικτές αποδοχές (πριν τις κρατήσεις).
+            4. Έλεγξε τα μαθηματικά: Ισχύει γενικά ότι Μικτά (Σύνολο_Αποδ) - Κρατήσεις Εργαζομένου - ΦΜΥ = Καθαρές (Πληρωτέο). Χρησιμοποίησε αυτή τη λογική για να επαληθεύσεις αν πήρες τα σωστά νούμερα.
+            5. Αν κάποιο ποσό (π.χ. ΤΕΚΑ ή ΦΜΥ) δεν υπάρχει στο έγγραφο, βάλε υποχρεωτικά 0.0.
+            6. Αγνόησε τυχόν αναδρομικά ή άλλες άσχετες σημειώσεις εκτός αν επηρεάζουν τα τελικά σύνολα.
             """
 
-            # Κλήση του μοντέλου Gemini 2.5 Flash (Ιδανικό για Multimodal εργασίες και Structured Output)
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=[file_part, prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=PayrollFinancials, # Επιβολή του Schema
-                    temperature=0.1 # Χαμηλό temperature για μέγιστη ακρίβεια χωρίς «φαντασία»
+                    response_schema=PayrollFinancials,
+                    temperature=0.0  # Απόλυτη σταθερότητα και μηδενικό hallucination
                 ),
             )
             
-            # Μετατροπή της απάντησης κειμένου σε Python Dictionary
             return json.loads(response.text)
 
         except Exception as e:
@@ -329,7 +327,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                         for k, v in st.session_state[f"ocr_res_{fin_key}"].items():
                             default_values[k] = v
 
-                # Σχεδίαση των Number Inputs
+                # Σχεδίαση των Number Inputs με τις τιμές (είτε από CSV είτε από το AI OCR)
                 c1, c2 = st.columns(2)
                 v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f")
                 v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=default_values["ΙΚΑ_Εργοδ"], format="%.2f")
@@ -351,12 +349,12 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 c10.markdown(f"<div style='background-color:#e8f5e9; padding:10px; border-radius:5px; border:1px solid #4caf50; text-align:center; margin-top:15px;'><small>Έλεγχος Αθροίσματος</small><br><b>{calc_total:,.2f} €</b></div>", unsafe_allow_html=True)
 
                 if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
-                    # Save Checks
+                    # Αποθήκευση Ελέγχων (Checks)
                     new_ks = [r['ID_Κλειδί'] for r in all_results]
                     audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
                     save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
                     
-                    # Save Financials
+                    # Αποθήκευση Οικονομικών Στοιχείων (Financials)
                     fin_row = {"ID_Κλειδί": fin_key, "ΙΚΑ_Εργ": v_ika_erg, "ΙΚΑ_Εργοδ": v_ika_ergo, "ΤΕΚΑ_Εργ": v_teka_erg, "ΤΕΚΑ_Εργοδ": v_teka_ergo, "Σύνολο_Εισφ": v_sum_eisf, "ΦΜΥ": v_fmy, "Καθαρές": v_net, "Σύνολο_Αποδ": v_total_ap, "ΟΠΣΚΕ": v_opske}
                     fin_df = pd.concat([fin_df[fin_df['ID_Κλειδί'] != fin_key], pd.DataFrame([fin_row])], ignore_index=True)
                     save_to_csv(fin_df, FINANCIALS_FILE)
