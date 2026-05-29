@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 
 # --- 1. ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ ---
 st.set_page_config(
-    page_title="Payroll Verifier Pro",
-    page_icon="🛡️",
-    layout="wide"
+    page_title="Payroll Verifier Pro",
+    page_icon="🛡️",
+    layout="wide"
 )
 
 # --- 2. ΟΡΙΣΜΟΣ ΑΡΧΕΙΩΝ ΔΕΔΟΜΕΝΩΝ ---
@@ -18,84 +18,21 @@ PROJECTS_FILE = 'data_projects.csv'
 CHECKLIST_FILE = 'checklist_results.csv'
 EMPLOYEES_FILE = 'data_employees.csv'
 FINANCIALS_FILE = 'payroll_financials.csv'
+PAYROLL_CHECKS_FILE = 'payroll_checks.csv' 
 
-# --- 3. PYDANTIC SCHEMA ΓΙΑ STRUCTURED OUTPUT ΑΠΟ ΤΟ AI ---
-class PayrollData(BaseModel):
-    Περίοδος_Εγγράφου: str = Field(description="Ο μήνας και το έτος της απόδειξης μισθοδοσίας, π.χ. ΜΑΪΟΣ 2026")
-    Τακτικές_Αποδοχές: float = Field(description="Μικτές τακτικές αποδοχές / βασικός μισθός")
-    Δώρο_Πάσχα: float = Field(description="Ποσό για Δώρο Πάσχα, αν δεν υπάρχει βάλε 0")
-    Δώρο_Χριστουγέννων: float = Field(description="Ποσό για Δώρο Χριστουγέννων, αν δεν υπάρχει βάλε 0")
-    Επίδομα_Άδειας: float = Field(description="Ποσό για Επίδομα Άδειας, αν δεν υπάρχει βάλε 0")
-    Σύνολο_Αποδ: float = Field(description="Συνολικές μικτές αποδοχές (άθροισμα όλων των αποδοχών) ή το συνολικο κοστος συνηθως στο τελος της γραμμησ")
-    ΙΚΑ_Εργ: float = Field(description="Ασφαλιστικές εισφορές εργαζομένου (κράτηση υπαλλήλου)")
-    ΙΚΑ_Εργοδ: float = Field(description="Ασφαλιστικές εισφορές εργοδότη")
-    ΤΕΚΑ_Εργ: float = Field(description="Εισφορές εργαζομένου ΤΕΚΑ, αν δεν υπάρχει βάλε 0")
-    ΤΕΚΑ_Εργοδ: float = Field(description="Εισφορές εργοδότη ΤΕΚΑ, αν δεν υπάρχει βάλε 0")
-    Σύνολο_Εισφ: float = Field(description="Συνολικό ποσό εισφορών (κρατήσεων) χωρίς το ΦΜΥ")
-    ΦΜΥ: float = Field(description="Φόρος Μισθωτών Υπηρεσιών (Φ.Μ.Υ.), αν δεν υπάρχει βάλε 0")
-    Καθαρές: float = Field(description="Καθαρό πληρωτέο ποσό στον εργαζόμενο")
-    ΟΠΣΚΕ: float = Field(description="Το αιτούμενο ποσό για το ΟΠΣΚΕ (συνήθως ταυτίζεται με το Σύνολο Μικτών)")
-
-# --- 4. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
+# --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
 def load_data(filename, columns):
-    if not os.path.isfile(filename) or os.path.getsize(filename) == 0:
-        return pd.DataFrame(columns=columns)
-    try:
-        return pd.read_csv(filename)
-    except Exception:
-        return pd.DataFrame(columns=columns)
+    if not os.path.isfile(filename) or os.path.getsize(filename) == 0:
+        return pd.DataFrame(columns=columns)
+    try:
+        return pd.read_csv(filename)
+    except Exception:
+        return pd.DataFrame(columns=columns)
 
 def save_to_csv(df, filename):
-    df.to_csv(filename, index=False, encoding='utf-8-sig')
+    df.to_csv(filename, index=False, encoding='utf-8-sig')
 
-def extract_financials_with_ai(uploaded_file, employee_name):
-    # Έλεγχος αν υπάρχει το API Key στα secrets
-    if "GEMINI_API_KEY" not in st.secrets:
-        st.error("❌ Δεν βρέθηκε το 'GEMINI_API_KEY' στα Streamlit Secrets! Παρακαλώ ρυθμίστε το στο αρχείο .streamlit/secrets.toml")
-        return None
-    
-    try:
-        # Αρχικοποίηση του νέου GenAI Client
-        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-        
-        # Διάβασμα των bytes του αρχείου
-        file_bytes = uploaded_file.read()
-        mime_type = uploaded_file.type
-        
-        # Προετοιμασία του αρχείου ως inline data για το API
-        document_part = types.Part.from_bytes(
-            data=file_bytes,
-            mime_type=mime_type
-        )
-        
-        prompt = f"""
-        Είσαι ένας έμπειρος Έλληνας λογιστής και ελεγκτής μισθοδοσίας. 
-        Μελέτησε προσεκτικά την επισυναπτόμενη απόδειξη μισθοδοσίας/έντυπο για τον υπάλληλο με όνομα "{employee_name}".
-        Εξήγαγε όλα τα οικονομικά μεγέθη και τις κρατήσεις που ζητούνται στο σχήμα. 
-        Σιγουρέψου ότι μετατρέπεις όλα τα ποσά σε αριθμούς (float) και αν κάποιο πεδίο λείπει, βάλε 0.0.
-        """
-        
-        # Κλήση του μοντέλου gemini-2.5-flash με απαίτηση για δομημένο JSON βάσει του Pydantic Schema
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[document_part, prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=PayrollData,
-                temperature=0.1,  # Χαμηλό temperature για μέγιστη ακρίβεια στα νούμερα
-            ),
-        )
-        
-        # Μετατροπή του string JSON σε python dictionary
-        return json.loads(response.text)
-        
-    except Exception as e:
-        st.error(f"❌ Σφάλμα κατά την ανάλυση του εγγράφου από το AI: {str(e)}")
-        return None
-
-# --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (ΟΡΙΣΜΟΣ ΣΥΝΑΡΤΗΣΗΣ) ---
-# Μετατρέπουμε το block σε συνάρτηση για να μπορεί να κληθεί σωστά από το μενού παρακάτω
-
+# --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (STRUCTURED OUTPUT SCHEMA & AI OCR) ---
 class PayrollFinancials(BaseModel):
     ΙΚΑ_Εργ: float = Field(description="Οι κρατήσεις ή εισφορές του ασφαλισμένου/εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Μην το μπερδεύεις με τις εργοδοτικές εισφορές.")
     ΙΚΑ_Εργοδ: float = Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Αναγράφονται συνήθως ως 'Εργοδοτικές Εισφορές' ή 'Εισφορές Εργοδότη'.")
@@ -136,7 +73,7 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         2. ΜΟΝΟ ΑΤΟΜΙΚΑ ΣΤΟΙΧΕΙΑ: Βρες τη γραμμή ή το τμήμα που αντιστοιχεί στον "{emp_name}" και πάρε ΜΟΝΟ τα δικά του ποσά. 
         3. ΑΓΝΟΗΣΕ ΓΕΝΙΚΑ ΣΥΝΟΛΑ: Μην πάρεις ποτέ τα συνολικά αθροίσματα της επιχείρησης.
         4. Μην μπερδεύεις τις στήλες 'Αποδοχές', 'Κρατήσεις' και 'Εργοδοτικές Εισφορές'.
-        5. Το 'Καθαρές' is ΠΑΝΤΑ το πληρωτέο ποσό στον εργαζόμενο.
+        5. Το 'Καθαρές' είναι ΠΑΝΤΑ το πληρωτέο ποσό στον εργαζόμενο.
         6. Το 'Σύνολο_Αποδ' είναι οι συνολικές μικτές αποδοχές του συγκεκριμένου υπαλλήλου.
         """
 
@@ -154,11 +91,8 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
 
-# Ορίζουμε τη συνάρτηση που καλείται στο τέλος του αρχείου σας
-def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
-    # Εδώ μεταφέρουμε όλο τον UI κώδικα που είχατε αρχικά για την εμφάνιση των inputs
-    # Σημείωση: Σιγουρευτείτε ότι έχετε ορίσει τη μεταβλητή PAYROLL_CHECKS_FILE στην αρχή του αρχείου σας (π.χ. PAYROLL_CHECKS_FILE = 'payroll_checks.csv')
-    PAYROLL_CHECKS_FILE = 'payroll_checks.csv' 
+def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
+    """Συνάρτηση σχεδίασης του UI για το Στάδιο 3"""
     
     # --- ΕΛΕΓΧΟΣ ΔΙΚΑΙΟΛΟΓΗΤΙΚΩΝ ---
     audit_df = load_data(PAYROLL_CHECKS_FILE, ["ID_Κλειδί", "Έγγραφο", "Κατάσταση", "Σχόλιο"])
@@ -180,12 +114,11 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
         return {"ID_Κλειδί": key_id, "Έγγραφο": label, "Κατάσταση": stat, "Σχόλιο": note}
 
     st.caption("📌 ΚΕΝΤΡΙΚΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ")
-    # Χρησιμοποιούμε το ΑΦΜ που έρχεται δυναμικά από το sidebar πλέον (emp_data['ΑΦΜ'])
-    all_results.append(draw_row("Αναγγελία Πρόσληψης (Ε3)", f"PERM_{emp_data['ΑΦΜ']}_{emp_data['ΑΦΜ']}_E3"))
-    all_results.append(draw_row("Ταυτότητα Εργαζομένου", f"PERM_{emp_data['ΑΦΜ']}_{emp_data['ΑΦΜ']}_ID"))
+    all_results.append(draw_row("Αναγγελία Πρόσληψης (Ε3)", f"PERM_{selected_afm}_{emp_data['ΑΦΜ']}_E3"))
+    all_results.append(draw_row("Ταυτότητα Εργαζομένου", f"PERM_{selected_afm}_{emp_data['ΑΦΜ']}_ID"))
     st.caption(f"📅 ΜΗΝΙΑΙΑ ΠΑΡΑΔΟΤΕΑ ({period})")
     for md in ["Extrait", "Έμβασμα Πληρωμής", "Λογιστικό άρθρο καταχώρησης", "Λογιστικό άρθρο πληρωμής", "Βιβλίο εσόδων-εξόδων"]:
-        all_results.append(draw_row(md, f"MONTH_{emp_data['ΑΦΜ']}_{emp_data['ΑΦΜ']}_{period}_{md}"))
+        all_results.append(draw_row(md, f"MONTH_{selected_afm}_{emp_data['ΑΦΜ']}_{period}_{md}"))
 
     # --- ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI OCR ---
     st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
@@ -211,7 +144,8 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
         
         if trigger_key in st.session_state:
             for k, v in st.session_state[trigger_key].items():
-                default_values[k] = v
+                if k in default_values:
+                    default_values[k] = v
 
     c1, c2 = st.columns(2)
     v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f")
@@ -248,218 +182,209 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
         st.success("✅ Τα στοιχεία αποθηκεύτηκαν!")
         st.rerun()
 
-# --- 4. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
+# --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
 page = st.sidebar.radio(
-    "Μετάβαση σε:",
-    ["1. Διαχείριση Έργων", 
-     "2. Checklist ανά Έργο", 
-     "3. Μισθοδοσία Υπαλλήλων"]
+    "Μετάβαση σε:",
+    ["1. Διαχείριση Έργων", 
+     "2. Checklist ανά Έργο", 
+     "3. Μισθοδοσία Υπαλλήλων"]
 )
 
 # --- ΣΤΑΔΙΟ 1: ΔΙΑΧΕΙΡΙΣΗ ΕΡΓΩΝ ---
 if page == "1. Διαχείριση Έργων":
-    st.header("🏢 Διαχείριση Επιχειρήσεων")
-    with st.expander("➕ Προσθήκη / Επεξεργασία Έργου", expanded=True):
-        with st.form("project_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Επωνυμία Επιχείρησης")
-                afm = st.text_input("ΑΦΜ (9 ψηφία)", max_chars=9)
-            with col2:
-                mis = st.text_input("Κωδικός Έργου (MIS)")
-                budget = st.number_input("Συνολικός Προϋπολογισμός (€)", min_value=0.0)
-            if st.form_submit_button("💾 Αποθήκευση Στοιχείων"):
-                if name and afm:
-                    df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"])
-                    if afm in df['ΑΦΜ'].astype(str).values:
-                        df.loc[df['ΑΦΜ'].astype(str) == afm, ["Επωνυμία", "MIS", "Προϋπολογισμός"]] = [name, mis, budget]
-                    else:
-                        new_row = pd.DataFrame([{"Επωνυμία": name, "ΑΦΜ": afm, "MIS": mis, "Προϋπολογισμός": budget}])
-                        df = pd.concat([df, new_row], ignore_index=True)
-                    save_to_csv(df, PROJECTS_FILE)
-                    st.success("✅ Το έργο αποθηκεύτηκε!")
-                    st.rerun()
+    st.header("🏢 Διαχείριση Επιχειρήσεων")
+    with st.expander("➕ Προσθήκη / Επεξεργασία Έργου", expanded=True):
+        with st.form("project_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                name = st.text_input("Επωνυμία Επιχείρησης")
+                afm = st.text_input("ΑΦΜ (9 ψηφία)", max_chars=9)
+            with col2:
+                mis = st.text_input("Κωδικός Έργου (MIS)")
+                budget = st.number_input("Συνολικός Προϋπολογισμός (€)", min_value=0.0)
+            if st.form_submit_button("💾 Αποθήκευση Στοιχείων"):
+                if name and afm:
+                    df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"])
+                    if afm in df['ΑΦΜ'].astype(str).values:
+                        df.loc[df['ΑΦΜ'].astype(str) == afm, ["Επωνυμία", "MIS", "Προϋπολογισμός"]] = [name, mis, budget]
+                    else:
+                        new_row = pd.DataFrame([{"Επωνυμία": name, "ΑΦΜ": afm, "MIS": mis, "Προϋπολογισμός": budget}])
+                        df = pd.concat([df, new_row], ignore_index=True)
+                    save_to_csv(df, PROJECTS_FILE)
+                    st.success("✅ Το έργο αποθηκεύτηκε!")
+                    st.rerun()
 
-    st.markdown("### 📋 Λίστα Εγγεγραμμένων Επιχειρήσεων")
-    df_display = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"])
-    if not df_display.empty:
-        st.dataframe(df_display, use_container_width=True, hide_index=True)
-        with st.expander("🗑️ Διαγραφή Επιχείρησης"):
-            delete_afm = st.selectbox("Επιλέξτε ΑΦΜ για διαγραφή:", df_display['ΑΦΜ'].unique())
-            if st.button("Οριστική Διαγραφή", type="primary"):
-                df_display = df_display[df_display['ΑΦΜ'].astype(str) != str(delete_afm)]
-                save_to_csv(df_display, PROJECTS_FILE)
-                st.rerun()
+    st.markdown("### 📋 Λίστα Εγγεγραμμένων Επιχειρήσεων")
+    df_display = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ", "MIS", "Προϋπολογισμός"])
+    if not df_display.empty:
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
+        with st.expander("🗑️ Διαγραφή Επιχείρησης"):
+            delete_afm = st.selectbox("Επιλέξτε ΑΦΜ για διαγραφή:", df_display['ΑΦΜ'].unique())
+            if st.button("Οριστική Διαγραφή", type="primary"):
+                df_display = df_display[df_display['ΑΦΜ'].astype(str) != str(delete_afm)]
+                save_to_csv(df_display, PROJECTS_FILE)
+                st.rerun()
 
 # --- ΣΤΑΔΙΟ 2: CHECKLIST ΑΝΑ ΕΡΓΟ ---
 elif page == "2. Checklist ανά Έργο":
-    st.header("📂 Γενικά Παραδοτέα Μισθοδοσίας")
-    projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
-    if projects_df.empty:
-        st.warning("⚠️ Καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
-    else:
-        selected_name = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'])
-        selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_name]['ΑΦΜ'].iloc[0]).strip()
-        check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
-        
-        if not check_df.empty:
-            check_df['ΑΦΜ'] = check_df['ΑΦΜ'].astype(str).str.strip()
-            check_df['Σχόλιο'] = check_df['Σχόλιο'].fillna('').astype(str).str.replace('nan', '', case=False)
-            
-        required_docs = [
-            "Πίνακας Προσωπικού Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", 
-            "Αποδεικτικό Υποβολής ΑΠΔ", "ΑΠΔ ΤΕΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ", 
-            "Υπεύθυνη δήλωση συγγενών", "Επιστολή γνωστοποίησης", "Ασφαλιστική ενημερότητα", 
-            "Οικονομική καρτέλα ΕΦΚΑ", "Ηλεκτρονική καρτέλα οφειλετών", "Πίνακας χρεών οφειλέτη", 
-            "Ανάλυση κίνησης Ηλ. Καρτέλας", "Φορολογική ενημερότητα", "Στοιχεία ρυθμίσεων & Πληρωμή", 
-            "Προσωρινές δηλώσεις ΦΜΥ"
-        ]
-        
-        if f"success_{selected_afm}" in st.session_state:
-            st.success(f"✅ Το checklist για την επιχείρηση '{selected_name}' αποθηκεύτηκε επιτυχώς!")
-            del st.session_state[f"success_{selected_afm}"]
-        
-        results = []
-        for doc in required_docs:
-            existing = check_df[(check_df['ΑΦΜ'] == selected_afm) & (check_df['Εγγραφο'] == doc)]
-            
-            c1, c2, c3 = st.columns([1.5, 1.0, 2.5], gap="small")
-            c1.markdown(f"<div style='font-size:0.85rem; padding-top:5px;'><b>{doc}</b></div>", unsafe_allow_html=True)
-            
-            status = c2.selectbox(
-                "", 
-                ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], 
-                index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(existing['Κατάσταση'].iloc[0]) if not existing.empty else 0, 
-                key=f"gen_{selected_afm}_{doc}", 
-                label_visibility="collapsed"
-            )
-            
-            val_note = existing['Σχόλιο'].iloc[0] if not existing.empty else ""
-            if val_note.lower() == 'nan':
-                val_note = ""
-                
-            note = c3.text_input(
-                "", 
-                value=val_note, 
-                key=f"gen_n_{selected_afm}_{doc}", 
-                label_visibility="collapsed",
-                placeholder="Σημειώσεις..."
-            )
-            
-            results.append({"ΑΦΜ": selected_afm, "Εγγραφο": doc, "Κατάσταση": status, "Σχόλιο": note})
-            
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
-            check_df = check_df[check_df['ΑΦΜ'] != selected_afm]
-            save_to_csv(pd.concat([check_df, pd.DataFrame(results)], ignore_index=True), CHECKLIST_FILE)
-            st.session_state[f"success_{selected_afm}"] = True
-            st.rerun()
+    st.header("📂 Γενικά Παραδοτέα Μισθοδοσίας")
+    projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
+    if projects_df.empty:
+        st.warning("⚠️ Καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
+    else:
+        selected_name = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'])
+        selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_name]['ΑΦΜ'].iloc[0]).strip()
+        check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
+        
+        if not check_df.empty:
+            check_df['ΑΦΜ'] = check_df['ΑΦΜ'].astype(str).str.strip()
+            check_df['Σχόλιο'] = check_df['Σχόλιο'].fillna('').astype(str).str.replace('nan', '', case=False)
+            
+        required_docs = [
+            "Πίνακας Προσωπικού Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", 
+            "Αποδεικτικό Υποβολής ΑΠΔ", "ΑΠΔ ΤΕΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ", 
+            "Υπεύθυνη δήλωση συγγενών", "Επιστολή γνωστοποίησης", "Ασφαλιστική ενημερότητα", 
+            "Οικονομική καρτέλα ΕΦΚΑ", "Ηλεκτρονική καρτέλα οφειλετών", "Πίνακας χρεών οφειλέτη", 
+            "Ανάλυση κίνησης Ηλ. Καρτέλας", "Φορολογική ενημερότητα", "Στοιχεία ρυθμίσεων & Πληρωμή", 
+            "Προσωρινές δηλώσεις ΦΜΥ"
+        ]
+        
+        if f"success_{selected_afm}" in st.session_state:
+            st.success(f"✅ Το checklist για την επιχείρηση '{selected_name}' αποθηκεύτηκε επιτυχώς!")
+            del st.session_state[f"success_{selected_afm}"]
+        
+        results = []
+        for doc in required_docs:
+            existing = check_df[(check_df['ΑΦΜ'] == selected_afm) & (check_df['Εγγραφο'] == doc)]
+            
+            c1, c2, c3 = st.columns([1.5, 1.0, 2.5], gap="small")
+            c1.markdown(f"<div style='font-size:0.85rem; padding-top:5px;'><b>{doc}</b></div>", unsafe_allow_html=True)
+            
+            status = c2.selectbox(
+                "", 
+                ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], 
+                index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(existing['Κατάσταση'].iloc[0]) if not existing.empty else 0, 
+                key=f"gen_{selected_afm}_{doc}", 
+                label_visibility="collapsed"
+            )
+            
+            val_note = existing['Σχόλιο'].iloc[0] if not existing.empty else ""
+            if val_note.lower() == 'nan':
+                val_note = ""
+                
+            note = c3.text_input(
+                "", 
+                value=val_note, 
+                key=f"gen_n_{selected_afm}_{doc}", 
+                label_visibility="collapsed",
+                placeholder="Σημειώσεις..."
+            )
+            
+            results.append({"ΑΦΜ": selected_afm, "Εγγραφο": doc, "Κατάσταση": status, "Σχόλιο": note})
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
+            check_df = check_df[check_df['ΑΦΜ'] != selected_afm]
+            save_to_csv(pd.concat([check_df, pd.DataFrame(results)], ignore_index=True), CHECKLIST_FILE)
+            st.session_state[f"success_{selected_afm}"] = True
+            st.rerun()
 
-# --- ΣΤΑΔΙΟ 3: ΕΝΟΠΟΙΗΣΗ ΣΕΛΙΔΑΣ ΜΙΣΘΟΔΟΣΙΑΣ ΥΠΑΛΛΗΛΩΝ ---
+# --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Έλεγχος Μισθοδοσίας Υπαλλήλων")
-    
-    # ---------------- DYNAMIC SIDEBAR FOR EMPLOYEES ----------------
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("👥 Διαχείριση & Επιλογή Υπαλλήλων")
-    
-    # Φόρτωση υπαλλήλων
-    emp_cols = ["ID", "Ονοματεπώνυμο", "ΑΦΜ", "ΑΜΚΑ"]
-    emp_df = load_data(EMPLOYEES_FILE, emp_cols)
-    
-    # Επιβολή σωστής δομής αν το αρχείο είναι άδειο ή αλλοιωμένο
-    if emp_df.empty or not all(col in emp_df.columns for col in emp_cols):
-        emp_df = pd.DataFrame(columns=emp_cols)
-    else:
-        # Μετατροπή σε string και καθαρισμός κενών για σωστούς ελέγχους
-        emp_df['ΑΦΜ'] = emp_df['ΑΦΜ'].astype(str).str.strip()
-        emp_df['ΑΜΚΑ'] = emp_df['ΑΜΚΑ'].astype(str).str.strip()
-    
-    # 1. Φόρμα Προσθήκης Υπαλλήλου στο Sidebar (Με έλεγχο διπλότυπου ΑΦΜ/ΑΜΚΑ)
-    with st.sidebar.expander("➕ Προσθήκη Νέου Υπάλληλου"):
-        with st.form("add_employee_form"):
-            new_name = st.text_input("Ονοματεπώνυμο").strip()
-            new_afm = st.text_input("ΑΦΜ Υπαλλήλου (9 ψηφία)", max_chars=9).strip()
-            new_amka = st.text_input("ΑΜΚΑ Υπαλλήλου (11 ψηφία)", max_chars=11).strip()
-            
-            if st.form_submit_button("💾 Προσθήκη"):
-                if new_name and new_afm and new_amka:
-                    generated_id = f"EMP_{new_amka}"
-                    
-                    # Έλεγχος αν υπάρχει ήδη το ΑΦΜ ή το ΑΜΚΑ
-                    if not emp_df.empty and new_afm in emp_df['ΑΦΜ'].values:
-                        st.error(f"⚠️ Το ΑΦΜ **{new_afm}** ανήκει ήδη σε καταχωρημένο υπάλληλο!")
-                    elif not emp_df.empty and new_amka in emp_df['ΑΜΚΑ'].values:
-                        st.error(f"⚠️ Το ΑΜΚΑ **{new_amka}** υπάρχει ήδη στο σύστημα!")
-                    else:
-                        new_emp = pd.DataFrame([{
-                            "ID": generated_id, 
-                            "Ονοματεπώνυμο": new_name, 
-                            "ΑΦΜ": new_afm,
-                            "ΑΜΚΑ": new_amka
-                        }])
-                        emp_df = pd.concat([emp_df, new_emp], ignore_index=True)
-                        save_to_csv(emp_df, EMPLOYEES_FILE)
-                        st.success("🎉 Ο υπάλληλος προστέθηκε επιτυχώς!")
-                        st.rerun()
-                else:
-                    st.error("❌ Παρακαλώ συμπληρώστε όλα τα πεδία!")
-                    
-    # 2. Φόρμα Διαγραφής Υπαλλήλου στο Sidebar
-    if not emp_df.empty:
-        with st.sidebar.expander("🗑️ Διαγραφή Υπαλλήλου"):
-            # ΔΙΟΡΘΩΘΗΚΕ ΤΟ TYPO: row['ΑΜΚΑ'] αντί για row['AMKA']
-            delete_options = {
-                f"{row['Ονοματεπώνυμο']} (ΑΜΚΑ: {row['ΑΜΚΑ']})": row['ID']
-                for _, row in emp_df.iterrows() if pd.notna(row['ΑΜΚΑ'])
-            }
-            
-            if delete_options:
-                selected_del_label = st.selectbox("Επιλέξτε υπάλληλο για διαγραφή:", list(delete_options.keys()), key="del_emp_select")
-                target_del_id = delete_options[selected_del_label]
-                
-                if st.button("Οριστική Διαγραφή", type="primary", key="del_emp_btn"):
-                    emp_df = emp_df[emp_df['ID'].astype(str) != str(target_del_id)]
-                    save_to_csv(emp_df, EMPLOYEES_FILE)
-                    st.success("Ο υπάλληλος διαγράφηκε!")
-                    st.rerun()
-                
-    st.sidebar.markdown("---")
-    
-    # 3. Επιλογή Υπαλλήλου & Περιόδου για το Στάδιο 3
-    if emp_df.empty:
-        st.warning("⚠️ Δεν υπάρχουν καταχωρημένοι υπάλληλοι. Ανοίξτε το «Προσθήκη Νέου Υπάλληλου» στην αριστερή μπάρα για να βάλετε τον πρώτο!")
-    else:
-        emp_options = {}
-        for _, row in emp_df.iterrows():
-            if pd.notna(row["Ονοματεπώνυμο"]) and pd.notna(row["ID"]):
-                display_label = f"{row['Ονοματεπώνυμο']} (ΑΜΚΑ: {row['ΑΜΚΑ']})"
-                emp_options[display_label] = {
-                    "ID": str(row["ID"]), 
-                    "Ονοματεπώνυμο": str(row["Ονοματεπώνυμο"]), 
-                    "ΑΦΜ": str(row["ΑΦΜ"]),
-                    "ΑΜΚΑ": str(row["ΑΜΚΑ"])
-                }
-        
-        if emp_options:
-            selected_emp_label = st.sidebar.selectbox("Επιλέξτε Υπάλληλο για Έλεγχο:", list(emp_options.keys()))
-            emp_data = emp_options[selected_emp_label]
-            
-            months = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", 
-                      "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"]
-            selected_month = st.sidebar.selectbox("Μήνας:", months, index=4)
-            selected_year = st.sidebar.number_input("Έτος:", min_value=2020, max_value=2030, value=2026)
-            
-            period = f"{selected_month} {selected_year}"
-            fin_key = f"{emp_data['ID']}_{selected_month}_{selected_year}"
-            
-            st.sidebar.info(f"📋 **Στοιχεία Τρέχοντος Ελέγχου**")
-            st.sidebar.text(f"👤 ΑΦΜ: {emp_data['ΑΦΜ']}")
-            st.sidebar.text(f"🆔 ΑΜΚΑ: {emp_data['ΑΜΚΑ']}")
-            st.sidebar.text(f"📅 Περίοδος: {period}")
-            
-            render_stage_3(fin_key, emp_data, selected_month, selected_year, period)
-        else:
-            st.warning("⚠️ Τα δεδομένα των υπαλλήλων δεν είναι έγκυρα. Δοκιμάστε να προσθέσετε έναν νέο.")
+    st.header("👤 Έλεγχος Μισθοδοσίας Υπαλλήλων")
+    
+    # Χρειάζεται να ξέρουμε την επιλεγμένη επιχείρηση για να περάσουμε το ΑΦΜ της στη render_stage_3
+    projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
+    if projects_df.empty:
+        st.error("⚠️ Παρακαλώ καταχωρήστε τουλάχιστον μία επιχείρηση στο 'Στάδιο 1' πριν προχωρήσετε στον έλεγχο υπαλλήλων.")
+    else:
+        # Επιλογή επιχείρησης στο κύριο panel
+        selected_project_name = st.selectbox("Επιλέξτε Επιχείρηση για τον έλεγχο:", projects_df['Επωνυμία'], key="stage3_project_select")
+        selected_project_afm = str(projects_df[projects_df['Επωνυμία'] == selected_project_name]['ΑΦΜ'].iloc[0]).strip()
+
+        # ---------------- DYNAMIC SIDEBAR FOR EMPLOYEES ----------------
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("👥 Διαχείριση & Επιλογή Υπαλλήλων")
+        
+        emp_cols = ["ID", "Ονοματεπώνυμο", "ΑΦΜ", "ΑΜΚΑ"]
+        emp_df = load_data(EMPLOYEES_FILE, emp_cols)
+        
+        if emp_df.empty or not all(col in emp_df.columns for col in emp_cols):
+            emp_df = pd.DataFrame(columns=emp_cols)
+        else:
+            emp_df['ΑΦΜ'] = emp_df['ΑΦΜ'].astype(str).str.strip()
+            emp_df['AMKA'] = emp_df['ΑΜΚΑ'].astype(str).str.strip() # Διασφάλιση συμβατότητας
+        
+        # 1. Φόρμα Προσθήκης Υπαλλήλου
+        with st.sidebar.expander("➕ Προσθήκη Νέου Υπάλληλου"):
+            with st.form("add_employee_form"):
+                new_name = st.text_input("Ονοματεπώνυμο").strip()
+                new_afm = st.text_input("ΑΦΜ Υπαλλήλου (9 ψηφία)", max_chars=9).strip()
+                new_amka = st.text_input("ΑΜΚΑ Υπαλλήλου (11 ψηφία)", max_chars=11).strip()
+                
+                if st.form_submit_button("💾 Προσθήκη"):
+                    if new_name and new_afm and new_amka:
+                        generated_id = f"EMP_{new_amka}"
+                        
+                        if not emp_df.empty and new_afm in emp_df['ΑΦΜ'].values:
+                            st.error(f"⚠️ Το ΑΦΜ **{new_afm}** ανήκει ήδη σε υπάλληλο!")
+                        elif not emp_df.empty and new_amka in emp_df['ΑΜΚΑ'].values:
+                            st.error(f"⚠️ Το ΑΜΚΑ **{new_amka}** υπάρχει ήδη!")
+                        else:
+                            new_emp = pd.DataFrame([{"ID": generated_id, "Ονοματεπώνυμο": new_name, "ΑΦΜ": new_afm, "ΑΜΚΑ": new_amka}])
+                            emp_df = pd.concat([emp_df, new_emp], ignore_index=True)
+                            save_to_csv(emp_df, EMPLOYEES_FILE)
+                            st.success("🎉 Ο υπάλληλος προστέθηκε!")
+                            st.rerun()
+                    else:
+                        st.error("❌ Συμπληρώστε όλα τα πεδία!")
+                        
+        # 2. Φόρμα Διαγραφής Υπαλλήλου
+        if not emp_df.empty:
+            with st.sidebar.expander("🗑️ Διαγραφή Υπαλλήλου"):
+                delete_options = {f"{row['Ονοματεπώνυμο']} (ΑΜΚΑ: {row['ΑΜΚΑ']})": row['ID'] for _, row in emp_df.iterrows() if pd.notna(row['ΑΜΚΑ'])}
+                if delete_options:
+                    selected_del_label = st.selectbox("Επιλέξτε υπάλληλο για διαγραφή:", list(delete_options.keys()), key="del_emp_select")
+                    target_del_id = delete_options[selected_del_label]
+                    
+                    if st.button("Οριστική Διαγραφή", type="primary", key="del_emp_btn"):
+                        emp_df = emp_df[emp_df['ID'].astype(str) != str(target_del_id)]
+                        save_to_csv(emp_df, EMPLOYEES_FILE)
+                        st.success("Ο υπάλληλος διαγράφηκε!")
+                        st.rerun()
+                    
+        st.sidebar.markdown("---")
+        
+        # 3. Επιλογή Υπαλλήλου & Περιόδου
+        if emp_df.empty:
+            st.warning("⚠️ Δεν υπάρχουν καταχωρημένοι υπάλληλοι στο σύστημα.")
+        else:
+            emp_options = {}
+            for _, row in emp_df.iterrows():
+                if pd.notna(row["Ονοματεπώνυμο"]) and pd.notna(row["ID"]):
+                    display_label = f"{row['Ονοματεπώνυμο']} (ΑΜΚΑ: {row['ΑΜΚΑ']})"
+                    emp_options[display_label] = {"ID": str(row["ID"]), "Ονοματεπώνυμο": str(row["Ονοματεπώνυμο"]), "ΑΦΜ": str(row["ΑΦΜ"]), "ΑΜΚΑ": str(row["ΑΜΚΑ"])}
+            
+            if emp_options:
+                selected_emp_label = st.sidebar.selectbox("Επιλέξτε Υπάλληλο για Έλεγχο:", list(emp_options.keys()))
+                emp_data = emp_options[selected_emp_label]
+                
+                months = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"]
+                selected_month = st.sidebar.selectbox("Μήνας:", months, index=4)
+                selected_year = st.sidebar.number_input("Έτος:", min_value=2020, max_value=2030, value=2026)
+                
+                period = f"{selected_month} {selected_year}"
+                fin_key = f"{emp_data['ID']}_{selected_month}_{selected_year}"
+                
+                st.sidebar.info(f"📋 **Στοιχεία Τρέχοντος Ελέγχου**")
+                st.sidebar.text(f"🏢 Εταιρεία: {selected_project_name}")
+                st.sidebar.text(f"👤 ΑΦΜ Υπαλλ.: {emp_data['ΑΦΜ']}")
+                st.sidebar.text(f"🆔 ΑΜΚΑ Υπαλλ.: {emp_data['ΑΜΚΑ']}")
+                st.sidebar.text(f"📅 Περίοδος: {period}")
+                
+                # ΔΙΟΡΘΩΘΗΚΕ: Προσθήκη του selected_project_afm ως 6ο όρισμα
+                render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_project_afm)
+            else:
+                st.warning("⚠️ Τα δεδομένα των υπαλλήλων δεν είναι έγκυρα.")
