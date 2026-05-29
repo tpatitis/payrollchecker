@@ -152,35 +152,30 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
         Περίοδος_Εγγράφου: str = pydantic.Field(description="Ο μήνας και το έτος ή η συγκεκριμένη περίοδος μισθοδοσίας που αναγράφεται στο έγγραφο (π.χ. 'Μάιος 2024', 'Δώρο Πάσχα 2024', '11/2024').")
         Τακτικές_Αποδοχές: float = pydantic.Field(description="Οι βασικές/τακτικές μικτές αποδοχές του υπαλλήλου για τον συγκεκριμένο μήνα. Αν δεν διακρίνεται ξεχωριστά, βάλε το σύνολο των αποδοχών εδώ.")
         Δώρο_Πάσχα: float = pydantic.Field(description="Το ποσό για Δώρο Πάσχα, αν περιλαμβάνεται στο έγγραφο. Διαφορετικά 0.0.")
-        Δώρο_Χριστουγέννων: float = pydantic.Field(description="Το ποσό για Δώρο Χριστουγέννων, αν περιλαμβάνεται στο έγγραφο. Διαφορετικά 0.0.")
+        Δώρο_Χrostοyγέννων: float = pydantic.Field(description="Το ποσό για Δώρο Χριστουγέννων, αν περιλαμβάνεται στο έγγραφο. Διαφορετικά 0.0.")
         Επίδομα_Άδειας: float = pydantic.Field(description="Το ποσό για Επίδομα Άδειας, αν περιλαμβάνεται στο έγγραφο. Διαφορετικά 0.0.")
         Σύνολο_Αποδ: float = pydantic.Field(description="Οι συνολικές μικτές αποδοχές του υπαλλήλου (το άθροισμα Τακτικών, Δώρων και Επιδομάτων) ή αλλιώς το συνολικό κόστος")
         ΙΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις του εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ).")
         ΙΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ).")
         ΤΕΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ. Αν δεν υπάρχει, 0.0.")
         ΤΕΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το ΤΕΚΑ. Αν δεν υπάρχει, 0.0.")
-        Σύνολο_Εισφ: float = pydantic.Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου και εργοδότη, εκτός απο το ΦΜΥ που το έχουμε ξεχωριστά.")
+        Σύνολο_Εισφ: float = pydantic.Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου και εργοδότη χωρίς το ΦΜΥ.")
         ΦΜΥ: float = pydantic.Field(description="Ο Φόρος Μισθωτών Υπηρεσιών (Φ.Μ.Υ.). Αν δεν υπάρχει, 0.0.")
         Καθαρές: float = pydantic.Field(description="Το τελικό πληρωτέο ποσό στον υπάλληλο (καθαρό ποσό τραπέζης).")
 
     def extract_financials_with_ai(uploaded_file, emp_name):
-        """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
-        API_KEY = st.secrets["GEMINI_API_KEY"]
-        if not API_KEY:
-            st.error("🔑 Παρακαλώ ορίστε το Google Gemini API Key στα Secrets.")
+        """Συνάρτηση AI OCR που υποστηρίζει πολλαπλά API Keys και διαχειρίζεται σφάλματα Quota (429)"""
+        api_keys_raw = st.secrets.get("GEMINI_API_KEY", "")
+        api_keys = [k.strip() for k in api_keys_raw.split(",") if k.strip()]
+        
+        if not api_keys:
+            st.error("🔑 Παρακαλώ ορίστε τουλάχιστον ένα Gemini API Key στα Secrets.")
             return {}
 
-        try:
-            client = genai.Client(api_key=API_KEY)
-            file_bytes = uploaded_file.read()
-            mime_type = uploaded_file.type
-            
-            file_part = types.Part.from_bytes(
-                data=file_bytes,
-                mime_type=mime_type,
-            )
-
-            prompt = f"""
+        file_bytes = uploaded_file.read()
+        mime_type = uploaded_file.type
+        
+        prompt = f"""
             Είσαι ένας σχολαστικός Έλληνας λογιστής και ορκωτός ελεγκτής μισθοδοσίας. 
             Σου δίνεται ένα έγγραφο μισθοδοσίας. 
             
@@ -192,22 +187,42 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
             2. ΕΛΕΓΧΟΣ ΜΗΝΑ/ΠΕΡΙΟΔΟΥ: Εντόπισε την περίοδο μισθοδοσίας (π.χ. 'Μάιος 2024', 'Δώρο Πάσχα 2025', 'Απρίλιος 2024') και γράψε την επακριβώς στο πεδίο 'Περίοδος_Εγγράφου'. Αν το έγγραφο περιλαμβάνει πολλούς μήνες ή αναδρομικά, προσπάθησε να αποτυπώσεις την κύρια περίοδο που αφορά τη γραμμή του υπαλλήλου.
             3. ΔΙΑΚΡΙΣΗ ΕΙΔΟΥΣ ΑΠΟΔΟΧΩΝ: Μελέτησε προσεκτικά την περιγραφή των αποδοχών. Ξεχώρισε τις 'Τακτικές_Αποδοχές', το 'Δώρο_Πάσχα', το 'Δώρο_Χριστουγέννων' και το 'Επίδομα_Άδειας'. Το 'Σύνολο_Αποδ' πρέπει να είναι το άθροισμα αυτών των επιμέρους κατηγοριών.
             4. ΜΟΝΟ ΑΤΟΜΙΚΑ ΣΤΟΙΧΕΙΑ: Αγνοήστε τα γενικά σύνολα της επιχείρησης. Πάρτε μόνο τα ποσά που βρίσκονται στη γραμμή ή την καρτέλα του/της "{emp_name}".
-            """
+        """
 
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[file_part, prompt],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=PayrollFinancials,
-                    temperature=0.0
-                ),
-            )
-            return json.loads(response.text)
-
-        except Exception as e:
-            st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
-            return {}
+        # Δοκιμή των κλειδιών ένα-ένα σε περίπτωση σφάλματος 429
+        for i, api_key in enumerate(api_keys):
+            try:
+                client = genai.Client(api_key=api_key)
+                file_part = types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+                
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[file_part, prompt],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=PayrollFinancials,
+                        temperature=0.0
+                    ),
+                )
+                return json.loads(response.text)
+                
+            except Exception as e:
+                error_msg = str(e)
+                # Αν φταίει το όριο (429) και έχουμε κι άλλα κλειδιά, προχωράμε στο επόμενο
+                if ("429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg) and (i < len(api_keys) - 1):
+                    continue 
+                else:
+                    # Αν ήταν το τελευταίο κλειδί ή άλλο σφάλμα, εμφανίζουμε το μήνυμα
+                    if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+                        st.error(
+                            "🛑 **Εξαντλήθηκε το όριο αιτημάτων του Gemini API (Quota Exceeded)!**\n\n"
+                            "Όλα τα διαθέσιμα δωρεάν API Keys εξάντλησαν το όριό τους για σήμερα. "
+                            "Παρακαλώ δοκιμάστε ξανά αργότερα ή αναβαθμίστε το API Key σας σε Pay-as-you-go."
+                        )
+                    else:
+                        st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
+                    return {}
+        return {}
 
     st.header("👤 Διαχείριση & Έλεγχος Υπαλλήλων")
     projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
@@ -298,7 +313,6 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 
                 uploaded_file = st.file_uploader("📂 Μεταφορτώστε τη Μισθοδοτική", type=['png', 'jpg', 'jpeg', 'pdf'], key=f"up_{fin_key}")
                 
-                # Ορισμός στηλών για το αρχείο financials (προσθέσαμε τις νέες κατηγορίες αποδοχών και την περίοδο)
                 fin_columns = [
                     "ID_Κλειδί", "Περίοδος_Εγγράφου", "Τακτικές_Αποδοχές", "Δώρο_Πάσχα", 
                     "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Σύνολο_Αποδ", "ΙΚΑ_Εργ", 
@@ -307,7 +321,6 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 fin_df = load_data(FINANCIALS_FILE, fin_columns)
                 ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
                 
-                # Αρχικές τιμές
                 default_values = {k: (ext_fin[k].iloc[0] if not ext_fin.empty and k in ext_fin.columns else (0.0 if k != "Περίοδος_Εγγράφου" else "")) for k in fin_columns if k != "ID_Κλειδί"}
                 
                 if uploaded_file is not None:
@@ -325,13 +338,12 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                         for k, v in st.session_state[trigger_key].items():
                             default_values[k] = v
 
-                # 🔥 ΕΛΕΓΧΟΣ ΜΗΝΑ (VALIDATION): Σύγκριση επιλογής χρήστη και εύρηματος AI
+                # 🔥 ΕΛΕΓΧΟΣ ΜΗΝΑ (VALIDATION)
                 if default_values["Περίοδος_Εγγράφου"]:
                     ai_period = str(default_values["Περίοδος_Εγγράφου"]).lower()
                     user_month = selected_month.lower()
                     user_year = str(selected_year)
                     
-                    # Έλεγχος αν ο επιλεγμένος μήνας ή το έτος λείπουν από το κείμενο που διάβασε το AI
                     if (user_month[:4] not in ai_period) or (user_year not in ai_period):
                         st.warning(
                             f"⚠️ **ΠΡΟΣΟΧΗ: ΠΙΘΑΝΟ ΛΑΘΟΣ ΑΡΧΕΙΟ Ή ΠΟΛΛΑΠΛΟΙ ΜΗΝΕΣ!**\n\n"
@@ -341,17 +353,43 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                     else:
                         st.success(f"✅ Η περίοδος του εγγράφου επαληθεύτηκε επιτυχώς: **{default_values['Περίοδος_Εγγράφου']}**")
 
-                # Σχεδίαση των Inputs στην οθόνη
+                # Σχεδίαση της περιόδου
                 st.text_input("📅 Περίοδος που αναγράφεται στο έγγραφο (AI Εύρημα)", value=default_values["Περίοδος_Εγγράφου"], key="input_period_doc")
                 
-                st.markdown("##### **Ανάλυση Μικτών Αποδοχών**")
-                c_ap1, c_ap2, c_ap3, c_ap4 = st.columns(4)
-                v_tak_ap = c_ap1.number_input("Τακτικές Αποδοχές", value=float(default_values["Τακτικές_Αποδοχές"]), format="%.2f")
-                v_d_pasxa = c_ap2.number_input("Δώρο Πάσχα", value=float(default_values["Δώρο_Πάσχα"]), format="%.2f")
-                v_d_xrist = c_ap3.number_input("Δώρο Χριστουγέννων", value=float(default_values["Δώρο_Χριστουγέννων"]), format="%.2f")
-                v_epid_ad = c_ap4.number_input("Επίδομα Άδειας", value=float(default_values["Επίδομα_Άδειας"]), format="%.2f")
+                st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
+                
+                # 🔄 ΜΕΝΟΥ ΕΠΙΛΟΓΗΣ ΕΙΔΟΥΣ ΑΠΟΔΟΧΩΝ
+                type_of_payroll = st.selectbox(
+                    "📊 Επιλέξτε Είδος Αποδοχών για προβολή/καταχώρηση:",
+                    ["Τακτικές Αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα Άδειας"]
+                )
 
-                st.markdown("##### **Κρατήσεις & Ασφαλιστικά**")
+                v_tak_ap = float(default_values["Τακτικές_Αποδοχές"])
+                v_d_pasxa = float(default_values["Δώρο_Πάσχα"])
+                v_d_xrist = float(default_values["Δώρο_Χριστουγέννων"])
+                v_epid_ad = float(default_values["Επίδομα_Άδειας"])
+
+                # Εμφάνιση των πεδίων βάσει της επιλογής του χρήστη
+                if type_of_payroll == "Τακτικές Αποδοχές":
+                    st.markdown("### 🛠️ Τακτικές Αποδοχές Μήνα")
+                    v_tak_ap = st.number_input("Μικτές Τακτικές Αποδοχές", value=v_tak_ap, format="%.2f")
+                    
+                elif type_of_payroll == "Δώρο Πάσχα":
+                    st.markdown("### 🌸 Δώρο Πάσχα")
+                    v_d_pasxa = st.number_input("Ποσό Δώρου Πάσχα (Μικτά)", value=v_d_pasxa, format="%.2f")
+                    
+                elif type_of_payroll == "Δώρο Χριστουγέννων":
+                    st.markdown("### 🎄 Δώρο Χριστουγέννων")
+                    v_d_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (Μικτά)", value=v_d_xrist, format="%.2f")
+                    
+                elif type_of_payroll == "Επίδομα Άδειας":
+                    st.markdown("### 🏖️ Επίδομα Άδειας")
+                    v_epid_ad = st.number_input("Ποσό Επιδόματος Άδειας (Μικτά)", value=v_epid_ad, format="%.2f")
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # --- ΚΟΙΝΑ ΣΤΟΙΧΕΙΑ ΚΡΑΤΗΣΕΩΝ & ΦΟΡΩΝ ---
+                st.markdown("##### **Κρατήσεις & Ασφαλιστικά (Συνολικά Έντυπου)**")
                 c1, c2 = st.columns(2)
                 v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=float(default_values["ΙΚΑ_Εργ"]), format="%.2f")
                 v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=float(default_values["ΙΚΑ_Εργοδ"]), format="%.2f")
@@ -366,13 +404,11 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=float(default_values["ΦΜΥ"]), format="%.2f")
                 v_net = c7.number_input("Καθαρές Αποδοχές (Πληρωτέο)", value=float(default_values["Καθαρές"]), format="%.2f")
                 
-                c8, c9, c10 = st.columns(3)
-                v_total_ap = c8.number_input("Σύνολο Μικτών Αποδοχών (Έγγραφο)", value=float(default_values["Σύνολο_Αποδ"]), format="%.2f")
+                c8, c9 = st.columns(2)
+                v_total_ap = c8.number_input("Σύνολο Μικτών Αποδοχών (Όπως αναγράφεται)", value=float(default_values["Σύνολο_Αποδ"]), format="%.2f")
                 v_opske = c9.number_input("Αιτούμενο Ποσό ΟΠΣΚΕ", value=float(default_values["ΟΠΣΚΕ"]), format="%.2f")
                 
-                # Υπολογισμός και έλεγχος αθροισμάτων
-                calc_total_ap = v_tak_ap + v_d_pasxa + v_d_xrist + v_epid_ad
-                c10.markdown(f"<div style='background-color:#e8f5e9; padding:5px; border-radius:5px; border:1px solid #4caf50; text-align:center; margin-top:10px;'><small>Άθροισμα Ειδών Αποδοχών</small><br><b>{calc_total_ap:,.2f} €</b></div>", unsafe_allow_html=True)
+                st.markdown("<br>", unsafe_allow_html=True)
 
                 if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
                     # 1. Αποθήκευση Checklists
