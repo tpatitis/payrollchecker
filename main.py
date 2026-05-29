@@ -142,11 +142,20 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
     # 5. Έλεγχος Μήνα (Validation)
     current_doc_period = st.session_state[f"val_{fin_key}_Περίοδος_Εγγράφου"]
     if current_doc_period:
-        ai_period = str(current_doc_period).lower()
-        user_month = selected_month.lower()
+        # Συνάρτηση για αφαίρεση ελληνικών τόνων
+        def remove_accents(text):
+            accents = {'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι', 'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω', 'ΐ': 'ι', 'ΰ': 'υ'}
+            text = text.lower().strip()
+            for accented, unaccented in accents.items():
+                text = text.replace(accented, unaccented)
+            return text
+
+        ai_period_clean = remove_accents(str(current_doc_period))
+        user_month_clean = remove_accents(selected_month)
         user_year = str(selected_year)
         
-        if (user_month[:4] not in ai_period) or (user_year not in ai_period):
+        # Έλεγχος αν ο μήνας (πρώτα 3 γράμματα για σιγουριά, π.χ. ιαν, φεβ, ιουλ) και το έτος υπάρχουν στο έγγραφο
+        if (user_month_clean[:3] not in ai_period_clean) or (user_year not in ai_period_clean):
             st.warning(
                 f"⚠️ **ΠΡΟΣΟΧΗ: ΠΙΘΑΝΟ ΛΑΘΟΣ ΑΡΧΕΙΟ!**\n\n"
                 f"Έχετε επιλέξει περίοδο **{period}**, αλλά το AI εντόπισε στο έγγραφο την ένδειξη: "
@@ -154,15 +163,6 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
             )
         else:
             st.success(f"✅ Η περίοδος του εγγράφου επαληθεύτηκε: **{current_doc_period}**")
-
-    st.text_input(
-        "📅 Περίοδος που αναγράφεται στο έγγραφο (AI Εύρημα)", 
-        value=st.session_state[f"val_{fin_key}_Περίοδος_Εγγράφου"], 
-        key=f"input_period_doc_{fin_key}"
-    )
-    st.session_state[f"val_{fin_key}_Περίοδος_Εγγράφου"] = st.session_state[f"input_period_doc_{fin_key}"]
-    
-    st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
     
     # 6. ΜΕΝΟΥ ΕΠΙΛΟΓΗΣ ΕΙΔΟΥΣ ΑΠΟΔΟΧΩΝ
     type_of_payroll = st.selectbox(
