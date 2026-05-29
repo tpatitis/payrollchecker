@@ -1,5 +1,3 @@
-:::writing{variant="standard" id="48372"}
-```python
 # ========================= IMPORTS =========================
 import streamlit as st
 import pandas as pd
@@ -108,9 +106,6 @@ class PayrollFinancials(BaseModel):
     ΟΠΣΚΕ: float = Field(
         description="Αιτούμενο ποσό ΟΠΣΚΕ."
     )
-```
-
-
 
 # ========================= AI OCR =========================
 def extract_financials_with_ai_stage3(uploaded_file, emp_name):
