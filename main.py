@@ -80,22 +80,60 @@ elif page == "2. Checklist ανά Έργο":
         st.warning("⚠️ Καταχωρήστε μια επιχείρηση στο Στάδιο 1.")
     else:
         selected_name = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'])
-        selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_name]['ΑΦΜ'].iloc[0])
+        
+        # Καθαρίζουμε το ΑΦΜ από κενά για σωστή ταυτοποίηση
+        selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_name]['ΑΦΜ'].iloc[0]).strip()
+        
         check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
-        required_docs = ["Πίνακας Προσωπικού Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ", "ΑΠΔ ΤΕΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ", "Υπεύθυνη δήλωση συγγενών", "Επιστολή γνωστοποίησης", "Ασφαλιστική ενημερότητα", "Οικονομική καρτέλα ΕΦΚΑ", "Ηλεκτρονική καρτέλα οφειλετών", "Πίνακας χρεών οφειλέτη", "Ανάλυση κίνησης Ηλ. Καρτέλας", "Φορολογική ενημερότητα", "Στοιχεία ρυθμίσεων & Πληρωμή", "Προσωρινές δηλώσεις ΦΜΥ"]
+        
+        # Εξασφαλίζουμε ότι η στήλη ΑΦΜ στο αρχείο διαβάζεται σωστά ως κείμενο
+        if not check_df.empty:
+            check_df['ΑΦΜ'] = check_df['ΑΦΜ'].astype(str).str.strip()
+            
+        required_docs = [
+            "Πίνακας Προσωπικού Ε4", "Μισθολογικές καταστάσεις", "ΑΠΔ ΕΦΚΑ", 
+            "Αποδεικτικό Υποβολής ΑΠΔ", "ΑΠΔ ΤΕΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ", 
+            "Υπεύθυνη δήλωση συγγενών", "Επιστολή γνωστοποίησης", "Ασφαλιστική ενημερότητα", 
+            "Οικονομική καρτέλα ΕΦΚΑ", "Ηλεκτρονική καρτέλα οφειλετών", "Πίνακας χρεών οφειλέτη", 
+            "Ανάλυση κίνησης Ηλ. Καρτέλας", "Φορολογική ενημερότητα", "Στοιχεία ρυθμίσεων & Πληρωμή", 
+            "Προσωρινές δηλώσεις ΦΜΥ"
+        ]
         
         results = []
         for doc in required_docs:
-            existing = check_df[(check_df['ΑΦΜ'].astype(str) == selected_afm) & (check_df['Εγγραφο'] == doc)]
-            c1, c2, c3 = st.columns([1.2, 0.8, 3.0], gap="small")
-            c1.markdown(f"<div style='font-size:0.85rem;'><b>{doc}</b></div>", unsafe_allow_html=True)
-            status = c2.selectbox("", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(existing['Κατάσταση'].iloc[0]) if not existing.empty else 0, key=f"gen_{doc}", label_visibility="collapsed")
-            note = c3.text_input("", value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", key=f"gen_n_{doc}", label_visibility="collapsed")
+            # Φιλτράρισμα βάσει του συγκεκριμένου ΑΦΜ
+            existing = check_df[(check_df['ΑΦΜ'] == selected_afm) & (check_df['Εγγραφο'] == doc)]
+            
+            c1, c2, c3 = st.columns([1.5, 1.0, 2.5], gap="small")
+            c1.markdown(f"<div style='font-size:0.85rem; padding-top:5px;'><b>{doc}</b></div>", unsafe_allow_html=True)
+            
+            # ΔΙΟΡΘΩΣΗ: Προσθήκη του selected_afm στο key για να είναι μοναδικό ανά επιχείρηση
+            status = c2.selectbox(
+                "", 
+                ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], 
+                index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(existing['Κατάσταση'].iloc[0]) if not existing.empty else 0, 
+                key=f"gen_{selected_afm}_{doc}", 
+                label_visibility="collapsed"
+            )
+            
+            # ΔΙΟΡΘΩΣΗ: Προσθήκη του selected_afm στο key του text_input
+            note = c3.text_input(
+                "", 
+                value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", 
+                key=f"gen_n_{selected_afm}_{doc}", 
+                label_visibility="collapsed",
+                placeholder="Σχόλιο..."
+            )
+            
             results.append({"ΑΦΜ": selected_afm, "Εγγραφο": doc, "Κατάσταση": status, "Σχόλιο": note})
-        if st.button("💾 Αποθήκευση Checklist"):
-            check_df = check_df[check_df['ΑΦΜ'].astype(str) != selected_afm]
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
+            # Κρατάμε τις υπόλοιπες επιχειρήσεις και αντικαθιστούμε μόνο την τρέχουσα
+            check_df = check_df[check_df['ΑΦΜ'] != selected_afm]
             save_to_csv(pd.concat([check_df, pd.DataFrame(results)], ignore_index=True), CHECKLIST_FILE)
-            st.toast("Checklist αποθηκεύτηκε!")
+            st.success(f"✅ Το checklist για την επιχείρηση '{selected_name}' αποθηκεύτηκε επιτυχώς!")
+            st.rerun()
 
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
