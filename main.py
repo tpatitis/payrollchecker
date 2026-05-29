@@ -6,11 +6,11 @@ from PIL import Image
 import json
 
 # --- 1. ΡΥΘΜΙΣΗ AI (GEMINI) ---
-GOOGLE_API_KEY = "AIzaSyB_NjdNwQrRHeFzfphVPz8qIfTzgEQ-zSg" 
+# Ασφαλής ανάκτηση του API Key (Προτιμότερο να το βάλεις στα Secrets του Streamlit Cloud)
+GOOGLE_API_KEY = st.secrets.get("GEMINI_API_KEY", "AIzaSyB_NjdNwQrRHeFzfphVPz8qIfTzgEQ-zSg")
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # --- 2. ΣΥΝΑΡΤΗΣΕΙΣ ΔΕΔΟΜΕΝΩΝ (ΔΙΟΡΘΩΜΕΝΕΣ ΓΙΑ CLOUD) ---
-# Χρησιμοποιούμε τον κατάλογο /tmp/ για να έχουμε δικαιώματα εγγραφής στο Streamlit Cloud
 PROJECTS_FILE = '/tmp/data_projects.csv'
 EMPLOYEES_FILE = '/tmp/data_employees.csv'
 FINANCIALS_FILE = '/tmp/payroll_financials.csv'
@@ -21,7 +21,6 @@ def load_data(f, cols):
         return pd.DataFrame(columns=cols)
     try:
         df = pd.read_csv(f)
-        # Σιγουρεύουμε ότι όλες οι στήλες διαβάζονται ως κείμενο για να μην έχουμε θέμα στο φιλτράρισμα
         for col in df.columns:
             df[col] = df[col].astype(str).str.strip()
         return df
@@ -79,60 +78,33 @@ elif page == "2. Checklist ανά Έργο":
         st.warning("⚠️ Προσθέστε επιχείρηση στο Στάδιο 1.")
     else:
         sel_name = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'])
-        sel_afm = str(projects_df[projects_df['Επωνυμία'] == sel_name]['ΑΦΜ'].iloc[0])
+        sel_afm = str(projects_df[projects_df['Επωνυμία'] == sel_name]['ΑΦΜ'].iloc[0]).strip()
         check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
         
-        # Η πλήρης λίστα με όλα τα παραδοτέα που ζήτησες
         docs = [
-            "Πίνακας Προσωπικού Ε4 (Ετήσιος/Συμπληρωματικός)",
-            "Μισθολογικές καταστάσεις (υπογεγραμμένες)",
-            "ΑΠΔ ΕΦΚΑ (Κοινή)",
-            "Αποδεικτικό Υποβολής ΑΠΔ ΕΦΚΑ",
-            "ΑΠΔ ΤΕΚΑ",
-            "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ",
-            "Υπεύθυνη δήλωση μη απασχόλησης συγγενών",
-            "Επιστολή γνωστοποίησης όρων σύμβασης",
-            "Ασφαλιστική ενημερότητα (σε ισχύ)",
-            "Οικονομική καρτέλα εργοδότη ΕΦΚΑ",
-            "Ηλεκτρονική καρτέλα οφειλετών (ΚΕΑΟ)",
-            "Πίνακας χρεών οφειλέτη",
-            "Ανάλυση κίνησης Ηλ. Καρτέλας",
-            "Φορολογική ενημερότητα (για είσπραξη χρημάτων)",
-            "Στοιχεία ρυθμίσεων & Αποδεικτικά Πληρωμής",
+            "Πίνακας Προσωπικού Ε4 (Ετήσιος/Συμπληρωματικός)", "Μισθολογικές καταστάσεις (υπογεγραμμένες)",
+            "ΑΠΔ ΕΦΚΑ (Κοινή)", "Αποδεικτικό Υποβολής ΑΠΔ ΕΦΚΑ", "ΑΠΔ ΤΕΚΑ", "Αποδεικτικό Υποβολής ΑΠΔ ΤΕΚΑ",
+            "Υπεύθυνη δήλωση μη απασχόλησης συγγενών", "Επιστολή γνωστοποίησης όρων σύμβασης",
+            "Ασφαλιστική ενημερότητα (σε ισχύ)", "Οικονομική καρτέλα εργοδότη ΕΦΚΑ",
+            "Ηλεκτρονική καρτέλα οφειλετών (ΚΕΑΟ)", "Πίνακας χρεών οφειλέτη", "Ανάλυση κίνησης Ηλ. Καρτέλας",
+            "Φορολογική ενημερότητα (για είσπραξη χρημάτων)", "Στοιχεία ρυθμίσεων & Αποδεικτικά Πληρωμής",
             "Προσωρινές δηλώσεις ΦΜΥ & Αποδεικτικά"
         ]
         
         results = []
-        
-        # Εμφάνιση της λίστας
         for d in docs:
-            existing = check_df[(check_df['ΑΦΜ'].astype(str) == sel_afm) & (check_df['Εγγραφο'] == d)]
+            existing = check_df[(check_df['ΑΦΜ'] == sel_afm) & (check_df['Εγγραφο'] == d)]
             c1, c2, c3 = st.columns([2, 1, 1.5])
-            
             c1.markdown(f"**{d}**")
             
             curr_st = existing['Κατάσταση'].iloc[0] if not existing.empty else "Έλλειψη ❌"
-            status = c2.selectbox(
-                "Κατάσταση", 
-                ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], 
-                index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(curr_st), 
-                key=f"s_{sel_afm}_{d}", 
-                label_visibility="collapsed"
-            )
-            
-            note = c3.text_input(
-                "Σχόλιο", 
-                value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", 
-                key=f"n_{sel_afm}_{d}", 
-                label_visibility="collapsed", 
-                placeholder="Σημειώσεις..."
-            )
-            
+            status = c2.selectbox("Κατάσταση", ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"], index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(curr_st), key=f"s_{sel_afm}_{d}", label_visibility="collapsed")
+            note = c3.text_input("Σχόλιο", value=existing['Σχόλιο'].iloc[0] if not existing.empty else "", key=f"n_{sel_afm}_{d}", label_visibility="collapsed", placeholder="Σημειώσεις...")
             results.append({"ΑΦΜ": sel_afm, "Εγγραφο": d, "Κατάσταση": status, "Σχόλιο": note})
         
         st.divider()
         if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
-            others = check_df[check_df['ΑΦΜ'].astype(str) != sel_afm]
+            others = check_df[check_df['ΑΦΜ'] != sel_afm]
             save_to_csv(pd.concat([others, pd.DataFrame(results)], ignore_index=True), CHECKLIST_FILE)
             st.success(f"✅ Το checklist για την επιχείρηση {sel_name} ενημερώθηκε!")
 
@@ -143,10 +115,10 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
     if projects_df.empty:
         st.warning("⚠️ Προσθέστε επιχείρηση στο Στάδιο 1.")
     else:
-        col_l, col_r = st.columns([1, 1.2])
+        col_l, col_r = st.columns([1, 1.2], gap="large")
         with col_l:
             sel_p = st.selectbox("Επιχείρηση:", projects_df['Επωνυμία'])
-            s_afm = str(projects_df[projects_df['Επωνυμία'] == sel_p]['ΑΦΜ'].iloc[0])
+            s_afm = str(projects_df[projects_df['Επωνυμία'] == sel_p]['ΑΦΜ'].iloc[0]).strip()
             m_c, y_c = st.columns(2)
             month = m_c.selectbox("Μήνας:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"])
             year = y_c.selectbox("Έτος:", ["2024", "2025", "2026"], index=1)
@@ -154,28 +126,38 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
         
         with col_r:
             st.subheader("➕ Προσθήκη Υπαλλήλου")
-            e_name = st.text_input("Ονοματεπώνυμο")
-            c_a, c_m = st.columns(2)
-            e_afm = c_a.text_input("ΑΦΜ", max_chars=9)
-            e_amka = c_m.text_input("ΑΜΚΑ", max_chars=11)
-            if st.button("Καταχώρηση Υπαλλήλου"):
-                edf = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
-                save_to_csv(pd.concat([edf, pd.DataFrame([{"ΑΦΜ_Εργου": s_afm, "Ονοματεπώνυμο": e_name, "ΑΦΜ_Υπαλλήλου": e_afm, "ΑΜΚΑ_Υπαλλήλου": e_amka}])], ignore_index=True), EMPLOYEES_FILE)
-                st.rerun()
+            # Προσθήκη st.form για σωστό sync των state στο Cloud
+            with st.form("add_employee_form", clear_on_submit=True):
+                e_name = st.text_input("Ονοματεπώνυμο")
+                c_a, c_m = st.columns(2)
+                e_afm = c_a.text_input("ΑΦΜ", max_chars=9)
+                e_amka = c_m.text_input("ΑΜΚΑ", max_chars=11)
+                
+                if st.form_submit_button("Καταχώρηση Υπαλλήλου", use_container_width=True):
+                    if e_name and e_afm:
+                        edf = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
+                        new_emp = pd.DataFrame([{"ΑΦΜ_Εργου": s_afm, "Ονοματεπώνυμο": e_name.strip(), "ΑΦΜ_Υπαλλήλου": e_afm.strip(), "ΑΜΚΑ_Υπαλλήλου": e_amka.strip()}])
+                        save_to_csv(pd.concat([edf, new_emp], ignore_index=True), EMPLOYEES_FILE)
+                        st.success(f"✅ Ο υπάλληλος {e_name} προστέθηκε!")
+                        st.rerun()
+                    else:
+                        st.error("⚠️ Συμπληρώστε Ονοματεπώνυμο και ΑΦΜ.")
 
         st.divider()
         all_e = load_data(EMPLOYEES_FILE, ["ΑΦΜ_Εργου", "Ονοματεπώνυμο", "ΑΦΜ_Υπαλλήλου", "ΑΜΚΑ_Υπαλλήλου"])
-        c_emps = all_e[all_e['ΑΦΜ_Εργου'].astype(str) == s_afm]
+        c_emps = all_e[all_e['ΑΦΜ_Εργου'] == s_afm]
         e_list = c_emps.apply(lambda x: f"{x['Ονοματεπώνυμο']} (ΑΦΜ: {x['ΑΦΜ_Υπαλλήλου']})", axis=1).tolist()
 
-        if e_list:
+        if not e_list:
+            st.info("💡 Κανένας καταχωρημένος υπάλληλος για αυτή την επιχείρηση.")
+        else:
             sel_e = st.selectbox("🔍 Επιλέξτε Υπάλληλο:", ["---"] + e_list)
             if sel_e != "---":
-                e_afm_val = sel_e.split("(ΑΦΜ: ")[1].replace(")", "")
-                emp_data = c_emps[c_emps['ΑΦΜ_Υπαλλήλου'].astype(str) == e_afm_val].iloc[0]
+                e_afm_val = sel_e.split("(ΑΦΜ: ")[1].replace(")", "").strip()
+                emp_data = c_emps[c_emps['ΑΦΜ_Υπαλλήλου'] == e_afm_val].iloc[0]
                 f_key = f"FIN_{s_afm}_{e_afm_val}_{period}"
                 
-                st.write(f"📌 **ΑΜΚΑ Υπαλλήλου:** {emp_data['ΑΜΚΑ_Υπαλλήλου']}")
+                st.info(f"📌 **ΑΜΚΑ Υπαλλήλου:** {emp_data['ΑΜΚΑ_Υπαλλήλου']}")
                 
                 up_pay = st.file_uploader("📂 Ανέβασμα Μισθοδοτικής (AI Ανάλυση)", type=['png', 'jpg', 'pdf'])
                 ocr_data = {}
