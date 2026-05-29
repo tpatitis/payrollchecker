@@ -13,7 +13,6 @@ st.set_page_config(
 PROJECTS_FILE = 'data_projects.csv'
 CHECKLIST_FILE = 'checklist_results.csv'
 EMPLOYEES_FILE = 'data_employees.csv'
-PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 FINANCIALS_FILE = 'payroll_financials.csv'
 
 # --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
@@ -48,7 +47,7 @@ def extract_financials_with_ai(uploaded_file, employee_name):
     }
 
 # --- ΣΤΑΔΙΟ 3: ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI ΑΝΑΛΥΣΗ ---
-def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, all_results, audit_df):
+def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
     st.markdown("### 💰 Στάδιο 3: Έλεγχος & Καταχώρηση Αποδοχών")
     
     # 1. Φόρτωση υπαρχόντων δεδομένων από το CSV
@@ -73,7 +72,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, all
             st.session_state[state_name] = v
 
     if f"success_emp_{fin_key}" in st.session_state:
-        st.success("🎉 Τα οικονομικά στοιχεία και οι έλεγχοι αποθηκεύτηκαν με επιτυχία!")
+        st.success("🎉 Τα οικονομικά στοιχεία αποθηκεύτηκαν με επιτυχία!")
         del st.session_state[f"success_emp_{fin_key}"]
 
     # 4. Upload Αρχείου & AI Ανάλυση
@@ -170,11 +169,6 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, all
 
     # 8. --- ΑΠΟΘΗΚΕΥΣΗ ΔΕΔΟΜΕΝΩΝ ---
     if st.button("💾 Αποθήκευση Όλων", use_container_width=True, key=f"save_btn_{fin_key}"):
-        if len(all_results) > 0:
-            new_ks = [r['ID_Κλειδί'] for r in all_results]
-            audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
-            save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
-        
         fin_row = {
             "ID_Κλειδί": fin_key,
             "Περίοδος_Εγγράφου": st.session_state[f"val_{fin_key}_Περίοδος_Εγγράφου"],
@@ -312,42 +306,66 @@ elif page == "2. Checklist ανά Έργο":
 elif page == "3. Μισθοδοσία Υπαλλήλων":
     st.header("👤 Έλεγχος Μισθοδοσίας Υπαλλήλων")
     
+    # ---------------- DYNAMIC SIDEBAR FOR EMPLOYEES ----------------
     st.sidebar.markdown("---")
-    st.sidebar.subheader("👤 Στοιχεία Υπαλλήλου & Μήνα")
+    st.sidebar.subheader("👥 Διαχείριση & Επιλογή Υπαλλήλων")
     
-    employees = [
-        {"ID": "EMP001", "Ονοματεπώνυμο": "Γεώργιος Παπαδόπουλος", "ΑΦΜ": "123456789"},
-        {"ID": "EMP002", "Ονοματεπώνυμο": "Μαρία Κωνσταντίνου", "ΑΦΜ": "987654321"}
-    ]
-    emp_options = {emp["Ονοματεπώνυμο"]: emp for emp in employees}
-    selected_emp_name = st.sidebar.selectbox("Επιλέξτε Υπάλληλο:", list(emp_options.keys()))
-    emp_data = emp_options[selected_emp_name]
+    # Φόρτωση υπαλλήλων από το CSV αρχείο
+    emp_cols = ["ID", "Ονοματεπώνυμο", "ΑΦΜ"]
+    emp_df = load_data(EMPLOYEES_FILE, emp_cols)
     
-    months = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", 
-              "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"]
-    selected_month = st.sidebar.selectbox("Μήνας:", months, index=4)
-    selected_year = st.sidebar.number_input("Έτος:", min_value=2020, max_value=2030, value=2026)
+    # 1. Φόρμα Προσθήκης Υπαλλήλου στο Sidebar
+    with st.sidebar.expander("➕ Προσθήκη Νέου Υπάλληλου"):
+        with st.form("add_employee_form"):
+            new_id = st.text_input("ID Υπαλλήλου (π.χ. EMP001)")
+            new_name = st.text_input("Ονοματεπώνυμο")
+            new_afm = st.text_input("ΑΦΜ Υπαλλήλου", max_chars=9)
+            if st.form_submit_button("💾 Προσθήκη"):
+                if new_id and new_name and new_afm:
+                    if new_id in emp_df['ID'].astype(str).values:
+                        st.error("Το ID υπάρχει ήδη!")
+                    else:
+                        new_emp = pd.DataFrame([{"ID": new_id, "Ονοματεπώνυμο": new_name, "ΑΦΜ": new_afm}])
+                        emp_df = pd.concat([emp_df, new_emp], ignore_index=True)
+                        save_to_csv(emp_df, EMPLOYEES_FILE)
+                        st.success("Ο υπάλληλος προστέθηκε!")
+                        st.rerun()
+                else:
+                    st.error("Συμπληρώστε όλα τα πεδία!")
+                    
+    # 2. Φόρμα Διαγραφής Υπαλλήλου στο Sidebar
+    if not emp_df.empty:
+        with st.sidebar.expander("🗑️ Διαγραφή Υπαλλήλου"):
+            del_id = st.selectbox("Επιλέξτε ID για διαγραφή:", emp_df['ID'].unique(), key="del_emp_select")
+            if st.button("Οριστική Διαγραφή", type="primary", key="del_emp_btn"):
+                emp_df = emp_df[emp_df['ID'].astype(str) != str(del_id)]
+                save_to_csv(emp_df, EMPLOYEES_FILE)
+                st.success("Ο υπάλληλος διαγράφηκε!")
+                st.rerun()
+                
+    st.sidebar.markdown("---")
     
-    period = f"{selected_month} {selected_year}"
-    fin_key = f"{emp_data['ID']}_{selected_month}_{selected_year}"
-    
-    st.sidebar.info(f"🔑 **ID Κλειδί:** {fin_key}")
-    
-    audit_columns = ["ID_Κλειδί", "Check_1", "Check_2", "Σχόλια"]
-    audit_df = load_data(PAYROLL_CHECKS_FILE, audit_columns)
-    ext_audit = audit_df[audit_df['ID_Κλειδί'] == fin_key]
-    
-    st.markdown("##### 🔍 Checklists Επιβεβαίωσης Υπαλλήλου")
-    c_col1, c_col2 = st.columns(2)
-    
-    if f"c3_1_{fin_key}" not in st.session_state:
-        st.session_state[f"c3_1_{fin_key}"] = bool(ext_audit['Check_1'].iloc[0]) if not ext_audit.empty else False
-    if f"c3_2_{fin_key}" not in st.session_state:
-        st.session_state[f"c3_2_{fin_key}"] = bool(ext_audit['Check_2'].iloc[0]) if not ext_audit.empty else False
+    # 3. Επιλογή Υπαλλήλου & Περιόδου για το Στάδιο 3
+    if emp_df.empty:
+        st.warning("⚠️ Δεν υπάρχουν καταχωρημένοι υπάλληλοι. Προσθέστε έναν από το Sidebar αριστερά.")
+    else:
+        # Μετατροπή του DataFrame σε λεξικό επιλογών
+        emp_options = {row["Ονοματεπώνυμο"]: {"ID": row["ID"], "Ονοματεπώνυμο": row["Ονοματεπώνυμο"], "ΑΦΜ": row["ΑΦΜ"]} 
+                       for _, row in emp_df.iterrows()}
         
-    ch1 = c_col1.checkbox("Συμφωνία ΑΦΜ/Ονόματος με Απόδειξη", key=f"c3_1_{fin_key}")
-    ch2 = c_col2.checkbox("Ύπαρξη υπογραφής στην απόδειξη", key=f"c3_2_{fin_key}")
-    
-    all_results = [{"ID_Κλειδί": fin_key, "Check_1": ch1, "Check_2": ch2, "Σχόλια": ""}]
-    
-    render_stage_3(fin_key, emp_data, selected_month, selected_year, period, all_results, audit_df)
+        selected_emp_name = st.sidebar.selectbox("Επιλέξτε Υπάλληλο για Έλεγχο:", list(emp_options.keys()))
+        emp_data = emp_options[selected_emp_name]
+        
+        months = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", 
+                  "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"]
+        selected_month = st.sidebar.selectbox("Μήνας:", months, index=4)
+        selected_year = st.sidebar.number_input("Έτος:", min_value=2020, max_value=2030, value=2026)
+        
+        period = f"{selected_month} {selected_year}"
+        fin_key = f"{emp_data['ID']}_{selected_month}_{selected_year}"
+        
+        st.sidebar.info(f"🔑 **ID Κλειδί Περιόδου:** {fin_key}")
+        st.sidebar.text(f"👤 ΑΦΜ: {emp_data['ΑΦΜ']}")
+        
+        # Εκτέλεση Σταδίου 3
+        render_stage_3(fin_key, emp_data, selected_month, selected_year, period)
