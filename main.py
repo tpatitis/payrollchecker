@@ -134,9 +134,34 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period):
                 ocr_data = extract_financials_with_ai(uploaded_file, emp_data['Ονοματεπώνυμο'])
                 if ocr_data:
                     st.session_state[trigger_key] = ocr_data
+                    
+                    # Αντιστοίχιση των πεδίων του AI Schema με τα εσωτερικά κλειδιά των number_inputs
+                    input_keys_mapping = {
+                        "Τακτικές_Αποδοχές": f"num_tak_{fin_key}",
+                        "Δώρο_Πάσχα": f"num_pas_{fin_key}",
+                        "Δώρο_Χριστουγέννων": f"num_xris_{fin_key}",
+                        "Επίδομα_Άδειας": f"num_ade_{fin_key}",
+                        "ΙΚΑ_Εργ": f"inp_ika_erg_{fin_key}",
+                        "ΙΚΑ_Εργοδ": f"inp_ika_ergod_{fin_key}",
+                        "ΤΕΚΑ_Εργ": f"inp_teka_erg_{fin_key}",
+                        "ΤΕΚΑ_Εργοδ": f"inp_teka_ergod_{fin_key}",
+                        "Σύνολο_Εισφ": f"inp_sum_eisf_{fin_key}",
+                        "ΦΜΥ": f"inp_fmy_{fin_key}",
+                        "Καθαρές": f"inp_net_{fin_key}",
+                        "Σύνολο_Αποδ": f"inp_tot_ap_{fin_key}",
+                        "ΟΠΣΚΕ": f"inp_opske_{fin_key}",
+                        "Περίοδος_Εγγράφου": f"input_period_doc_{fin_key}"
+                    }
+                    
+                    # Ενημέρωση του session state και ΚΑΘΑΡΙΣΜΟΣ των widget states για να αναγκαστούν να ανανεωθούν
                     for k, v in ocr_data.items():
                         st.session_state[f"val_{fin_key}_{k}"] = v
-                    st.success("✅ Η ανάλυση ολοκληρώθηκε! Τα πεδία συμπληρώθηκαν αυτόματα.")
+                        # Αν υπάρχει ήδη το widget στο state, το διαγράφουμε για να πάρει την καινούργια value
+                        widget_key = input_keys_mapping.get(k)
+                        if widget_key in st.session_state:
+                            del st.session_state[widget_key]
+                            
+                    st.success("✅ Η ανάλυση ολοκληρώθηκε! Τα πεδία ενημερώθηκαν.")
                     st.rerun()
     
     # 5. Έλεγχος Μήνα (Validation)
