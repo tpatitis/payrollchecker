@@ -18,7 +18,7 @@ PROJECTS_FILE = 'data_projects.csv'
 CHECKLIST_FILE = 'checklist_results.csv'
 EMPLOYEES_FILE = 'data_employees.csv'
 FINANCIALS_FILE = 'payroll_financials.csv'
-PAYROLL_CHECKS_FILE = 'payroll_checks.csv' 
+PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 
 # --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
 def load_data(filename, columns):
