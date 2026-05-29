@@ -261,97 +261,65 @@ elif page == "2. Checklist ανά Έργο":
             st.session_state[f"success_{selected_afm}"] = True
             st.rerun()
 
-# --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
+# --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (Πλήρης Κώδικας) ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
-    st.header("👤 Έλεγχος Μισθοδοσίας Υπαλλήλων")
-    
-    projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
-    if projects_df.empty:
-        st.error("⚠️ Παρακαλώ καταχωρήστε τουλάχιστον μία επιχείρηση στο 'Στάδιο 1' πριν προχωρήσετε.")
-    else:
-        selected_project_name = st.selectbox("Επιλέξτε Επιχείρηση για τον έλεγχο:", projects_df['Επωνυμία'], key="stage3_project_select")
-        selected_project_afm = str(projects_df[projects_df['Επωνυμία'] == selected_project_name]['ΑΦΜ'].iloc[0]).strip()
+    st.header("👤 Έλεγχος Μισθοδοσίας Υπαλλήλων")
+    
+    # 1. Επιλογή Επιχείρησης
+    projects_df = load_data(PROJECTS_FILE, ["Επωνυμία", "ΑΦΜ"])
+    if projects_df.empty:
+        st.error("⚠️ Παρακαλώ καταχωρήστε τουλάχιστον μία επιχείρηση στο 'Στάδιο 1'.")
+    else:
+        selected_project_name = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'], key="stage3_proj")
+        selected_project_afm = str(projects_df[projects_df['Επωνυμία'] == selected_project_name]['ΑΦΜ'].iloc[0]).strip()
 
-        # ---------------- DYNAMIC SIDEBAR FOR EMPLOYEES ----------------
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("👥 Διαχείριση & Επιλογή Υπαλλήλων")
-        
-        emp_cols = ["ID", "Ονοματεπώνυμο", "ΑΦΜ", "ΑΜΚΑ"]
-        emp_df = load_data(EMPLOYEES_FILE, emp_cols)
-        
-        if emp_df.empty or not all(col in emp_df.columns for col in emp_cols):
-            emp_df = pd.DataFrame(columns=emp_cols)
-        else:
-            emp_df['ΑΦΜ'] = emp_df['ΑΦΜ'].astype(str).str.strip()
-            emp_df['ΑΜΚΑ'] = emp_df['ΑΜΚΑ'].astype(str).str.strip()
-        
-        # 1. Φόρμα Προσθήκης Υπαλλήλου
-        with st.sidebar.expander("➕ Προσθήκη Νέου Υπάλληλου"):
-            with st.form("add_employee_form"):
-                new_name = st.text_input("Ονοματεπώνυμο").strip()
-                new_afm = st.text_input("ΑΦΜ Υπαλλήλου (9 ψηφία)", max_chars=9).strip()
-                new_amka = st.text_input("ΑΜΚΑ Υπαλλήλου (11 ψηφία)", max_chars=11).strip()
-                
-                if st.form_submit_button("💾 Προσθήκη"):
-                    if new_name and new_afm and new_amka:
-                        generated_id = f"EMP_{new_amka}"
-                        
-                        if not emp_df.empty and new_afm in emp_df['ΑΦΜ'].values:
-                            st.error(f"⚠️ Το ΑΦΜ **{new_afm}** ανήκει ήδη σε υπάλληλο!")
-                        elif not emp_df.empty and new_amka in emp_df['ΑΜΚΑ'].values:
-                            st.error(f"⚠️ Το ΑΜΚΑ **{new_amka}** υπάρχει ήδη!")
-                        else:
-                            new_emp = pd.DataFrame([{"ID": generated_id, "Ονοματεπώνυμο": new_name, "ΑΦΜ": new_afm, "ΑΜΚΑ": new_amka}])
-                            emp_df = pd.concat([emp_df, new_emp], ignore_index=True)
-                            save_to_csv(emp_df, EMPLOYEES_FILE)
-                            st.success("🎉 Ο υπάλληλος προστέθηκε!")
-                            st.rerun()
-                    else:
-                        st.error("❌ Συμπληρώστε όλα τα πεδία!")
-                        
-        # 2. Φόρμα Διαγραφής Υπαλλήλου
-        if not emp_df.empty:
-            with st.sidebar.expander("🗑️ Διαγραφή Υπαλλήλου"):
-                delete_options = {f"{row['Ονοματεπώνυμο']} (ΑΜΚΑ: {row['ΑΜΚΑ']})": row['ID'] for _, row in emp_df.iterrows() if pd.notna(row['ΑΜΚΑ'])}
-                if delete_options:
-                    selected_del_label = st.selectbox("Επιλέξτε υπάλληλο για διαγραφή:", list(delete_options.keys()), key="del_emp_select")
-                    target_del_id = delete_options[selected_del_label]
-                    
-                    if st.button("Οριστική Διαγραφή", type="primary", key="del_emp_btn"):
-                        emp_df = emp_df[emp_df['ID'].astype(str) != str(target_del_id)]
-                        save_to_csv(emp_df, EMPLOYEES_FILE)
-                        st.success("Ο υπάλληλος διαγράφηκε!")
-                        st.rerun()
-                    
-        st.sidebar.markdown("---")
-        
-        # 3. Επιλογή Υπαλλήλου & Περιόδου
-        if emp_df.empty:
-            st.warning("⚠️ Δεν υπάρχουν καταχωρημένοι υπάλληλοι στο σύστημα.")
-        else:
-            emp_options = {}
-            for _, row in emp_df.iterrows():
-                if pd.notna(row["Ονοματεπώνυμο"]) and pd.notna(row["ID"]):
-                    display_label = f"{row['Ονοματεπώνυμο']} (ΑΜΚΑ: {row['ΑΜΚΑ']})"
-                    emp_options[display_label] = {"ID": str(row["ID"]), "Ονοματεπώνυμο": str(row["Ονοματεπώνυμο"]), "ΑΦΜ": str(row["ΑΦΜ"]), "ΑΜΚΑ": str(row["ΑΜΚΑ"])}
-            
-            if emp_options:
-                selected_emp_label = st.sidebar.selectbox("Επιλέξτε Υπάλληλο για Έλεγχο:", list(emp_options.keys()))
-                emp_data = emp_options[selected_emp_label]
-                
-                months = ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"]
-                selected_month = st.sidebar.selectbox("Μήνας:", months, index=4)
-                selected_year = st.sidebar.number_input("Έτος:", min_value=2020, max_value=2030, value=2026)
-                
-                period = f"{selected_month} {selected_year}"
-                fin_key = f"{emp_data['ID']}_{selected_month}_{selected_year}"
-                
-                st.sidebar.info(f"📋 **Στοιχεία Τρέχοντος Ελέγχου**")
-                st.sidebar.text(f"🏢 Εταιρεία: {selected_project_name}")
-                st.sidebar.text(f"👤 ΑΦΜ Υπαλλ.: {emp_data['ΑΦΜ']}")
-                st.sidebar.text(f"🆔 ΑΜΚΑ Υπαλλ.: {emp_data['ΑΜΚΑ']}")
-                st.sidebar.text(f"📅 Περίοδος: {period}")
-                
-                render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_project_afm)
-            else:
-                st.warning("⚠️ Τα δεδομένα των υπαλλήλων δεν είναι έγκυρα.")
+        # 2. Sidebar Διαχείριση Υπαλλήλων
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("👥 Διαχείριση Υπαλλήλων")
+        
+        emp_df = load_data(EMPLOYEES_FILE, ["ID", "Ονοματεπώνυμο", "ΑΦΜ", "ΑΜΚΑ"])
+        
+        # Φόρμα προσθήκης (sidebar)
+        with st.sidebar.expander("➕ Προσθήκη Υπάλληλου"):
+            with st.form("add_emp"):
+                n_name = st.text_input("Ονοματεπώνυμο")
+                n_afm = st.text_input("ΑΦΜ")
+                n_amka = st.text_input("ΑΜΚΑ")
+                if st.form_submit_button("Προσθήκη"):
+                    new_row = pd.DataFrame([{"ID": f"EMP_{n_amka}", "Ονοματεπώνυμο": n_name, "ΑΦΜ": n_afm, "ΑΜΚΑ": n_amka}])
+                    save_to_csv(pd.concat([emp_df, new_row]), EMPLOYEES_FILE)
+                    st.rerun()
+         # 2. Φόρμα Διαγραφής Υπαλλήλου
+         if not emp_df.empty:
+            with st.sidebar.expander("🗑️ Διαγραφή Υπαλλήλου"):
+                delete_options = {f"{row['Ονοματεπώνυμο']} (ΑΜΚΑ: {row['ΑΜΚΑ']})": row['ID'] for _, row in emp_df.iterrows() if pd.notna(row['ΑΜΚΑ'])}
+                if delete_options:
+                    selected_del_label = st.selectbox("Επιλέξτε υπάλληλο για διαγραφή:", list(delete_options.keys()), key="del_emp_select")
+                    target_del_id = delete_options[selected_del_label]
+ 
+                    if st.button("Οριστική Διαγραφή", type="primary", key="del_emp_btn"):
+                        emp_df = emp_df[emp_df['ID'].astype(str) != str(target_del_id)]
+                        save_to_csv(emp_df, EMPLOYEES_FILE)
+                        st.success("Ο υπάλληλος διαγράφηκε!")
+                        st.rerun()
+                    
+        st.sidebar.markdown("---")
+        # 3. Επιλογή για έλεγχο
+        if not emp_df.empty:
+            emp_options = {f"{r['Ονοματεπώνυμο']} (ΑΜΚΑ: {r['ΑΜΚΑ']})": r for _, r in emp_df.iterrows()}
+            s_emp_label = st.sidebar.selectbox("Επιλέξτε Υπάλληλο:", list(emp_options.keys()))
+            emp_data = emp_options[s_emp_label]
+            
+            s_month = st.sidebar.selectbox("Μήνας:", ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"], index=4)
+            s_year = st.sidebar.number_input("Έτος:", value=2026)
+            
+            # --- ΕΔΩ ΕΙΝΑΙ ΤΟ ΚΛΕΙΔΙ: Εμφάνιση του περιεχομένου ---
+            period = f"{s_month} {s_year}"
+            fin_key = f"{emp_data['ID']}_{s_month}_{s_year}"
+            
+            st.info(f"Ελέγχεις: **{emp_data['Ονοματεπώνυμο']}** για την περίοδο **{period}**")
+            
+            # Κλήση της συνάρτησης που σχεδιάζει το UI
+            render_stage_3(fin_key, emp_data, s_month, s_year, period, selected_project_afm)
+        else:
+            st.warning("⚠️ Δεν υπάρχουν υπάλληλοι. Προσθέστε έναν από το μενού στα αριστερά.")
