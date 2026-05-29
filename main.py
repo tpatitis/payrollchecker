@@ -81,12 +81,9 @@ elif page == "2. Checklist ανά Έργο":
     else:
         selected_name = st.selectbox("Επιλέξτε Επιχείρηση:", projects_df['Επωνυμία'])
         
-        # Καθαρίζουμε το ΑΦΜ από κενά για σωστή ταυτοποίηση
         selected_afm = str(projects_df[projects_df['Επωνυμία'] == selected_name]['ΑΦΜ'].iloc[0]).strip()
-        
         check_df = load_data(CHECKLIST_FILE, ["ΑΦΜ", "Εγγραφο", "Κατάσταση", "Σχόλιο"])
         
-        # ΔΙΟΡΘΩΣΗ 1: Μετατροπή σε κείμενο και αντικατάσταση των 'nan' με κενό
         if not check_df.empty:
             check_df['ΑΦΜ'] = check_df['ΑΦΜ'].astype(str).str.strip()
             check_df['Σχόλιο'] = check_df['Σχόλιο'].fillna('').astype(str).str.replace('nan', '', case=False)
@@ -100,15 +97,12 @@ elif page == "2. Checklist ανά Έργο":
             "Προσωρινές δηλώσεις ΦΜΥ"
         ]
         
-        # Εμφάνιση σταθερού μηνύματος επιτυχίας αν έχει γίνει αποθήκευση
         if f"success_{selected_afm}" in st.session_state:
             st.success(f"✅ Το checklist για την επιχείρηση '{selected_name}' αποθηκεύτηκε επιτυχώς!")
-            # Διαγράφουμε το state για να μην εμφανίζεται για πάντα αν αλλάξει σελίδα
             del st.session_state[f"success_{selected_afm}"]
         
         results = []
         for doc in required_docs:
-            # Φιλτράρισμα βάσει του συγκεκριμένου ΑΦΜ
             existing = check_df[(check_df['ΑΦΜ'] == selected_afm) & (check_df['Εγγραφο'] == doc)]
             
             c1, c2, c3 = st.columns([1.5, 1.0, 2.5], gap="small")
@@ -122,7 +116,6 @@ elif page == "2. Checklist ανά Έργο":
                 label_visibility="collapsed"
             )
             
-            # Ανάκτηση σχολίου και σιγουριά ότι δεν είναι nan
             val_note = existing['Σχόλιο'].iloc[0] if not existing.empty else ""
             if val_note.lower() == 'nan':
                 val_note = ""
@@ -139,15 +132,13 @@ elif page == "2. Checklist ανά Έργο":
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # ΔΙΟΡΘΩΣΗ 2: Κουμπί αποθήκευσης με ξεκάθαρο μήνυμα επιτυχίας
         if st.button("💾 Αποθήκευση Checklist", use_container_width=True):
-            # Κρατάμε τις υπόλοιπες επιχειρήσεις και αντικαθιστούμε μόνο την τρέχουσα
             check_df = check_df[check_df['ΑΦΜ'] != selected_afm]
             save_to_csv(pd.concat([check_df, pd.DataFrame(results)], ignore_index=True), CHECKLIST_FILE)
             
-            # Αποθηκεύουμε την επιτυχία στο session_state πριν το rerun
             st.session_state[f"success_{selected_afm}"] = True
             st.rerun()
+
 # --- ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ ---
 elif page == "3. Μισθοδοσία Υπαλλήλων":
     from PIL import Image
@@ -156,20 +147,19 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
     import pydantic
     import json
 
-    # 1. ΕΝΙΣΧΥΜΕΝΟ SCHEMA: Αναλυτικές οδηγίες στο AI για το τι είναι το κάθε πεδίο
+    # 1. ΕΝΙΣΧΥΜΕΝΟ SCHEMA
     class PayrollFinancials(pydantic.BaseModel):
         ΙΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις ή εισφορές του ασφαλισμένου/εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Μην το μπερδεύεις με τις εργοδοτικές εισφορές.")
         ΙΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Αναγράφονται συνήθως ως 'Εργοδοτικές Εισφορές' ή 'Εισφορές Εργοδότη'.")
         ΤΕΚΑ_Εργ: float = pydantic.Field(description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ (επικουρικό). Αν δεν υπάρχει ξεχωριστή γραμμή για ΤΕΚΑ, βάλε 0.0.")
         ΤΕΚΑ_Εργοδ: float = pydantic.Field(description="Οι εισφορές του εργοδότη για το ΤΕΚΑ. Αν δεν υπάρχει ξεχωριστή γραμμή, βάλε 0.0.")
-        Σύνολο_Εισφ: float = pydantic.Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου ή/και εργοδότη. Αν αναγράφεται 'Σύνολο Κρατήσεων' ή 'Σύνολο Εισφορών', πάρε αυτό το ποσό. Προσοχή συνήθως το σύνολο εισφορών περιλαμβανει το ΦΜΥ. Να το επαληθευεις προσθέτοντας τις εισφορες ΙΚΑ και ΤΕΚΑ εργαζομένου και εργοδότη")
+        Σύνολο_Εισφ: float = pydantic.Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου ή/και εργοδότη. Αν αναγράφεται 'Σύνολο Κρατήσεων' ή 'Σύνολο Εισφορών', πάρε αυτό το ποσό. Προσοχή συνήθως το σύνολο εισφορών περιλαμβάνει το ΦΜΥ. Να το επαληθεύεις προσθέτοντας τις εισφορές ΙΚΑ και ΤΕΚΑ εργαζομένου και εργοδότη")
         ΦΜΥ: float = pydantic.Field(description="Ο Φόρος Μισθωτών Υπηρεσιών. Αναγράφεται ως Φ.Μ.Υ. ή 'Φόρος'. Αν δεν υπάρχει παρακράτηση φόρου, βάλε 0.0.")
         Καθαρές: float = pydantic.Field(description="Το τελικό ποσό που μπαίνει στην τράπεζα στον υπάλληλο. Αναγράφεται ως 'Πληρωτέο', 'Καθαρό Πληρωτέο' ή 'Καθαρές Αποδοχές'.")
         Σύνολο_Αποδ: float = pydantic.Field(description="Οι μικτές αποδοχές του υπαλλήλου πριν αφαιρεθούν οι κρατήσεις και ο φόρος. Αναγράφεται ως 'Μικτά', 'Σύνολο Αποδοχών' ή 'Τακτικές Αποδοχές'. Είναι το συνολικό κόστος του υπαλλήλου.")
 
     def extract_financials_with_ai(uploaded_file, emp_name):
         """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
-        
         API_KEY = st.secrets["GEMINI_API_KEY"]
         if not API_KEY:
             st.error("🔑 Παρακαλώ ορίστε το Google Gemini API Key στα Secrets.")
@@ -185,7 +175,6 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 mime_type=mime_type,
             )
 
-            # Δυναμικό Prompt με βάση τον επιλεγμένο υπάλληλο
             prompt = f"""
             Είσαι ένας σχολαστικός Έλληνας λογιστής και ορκωτός ελεγκτής μισθοδοσίας. 
             Σου δίνεται ένα έγγραφο μισθοδοσίας. 
@@ -209,10 +198,9 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=PayrollFinancials,
-                    temperature=0.0  # Απόλυτη σταθερότητα και μηδενικό hallucination
+                    temperature=0.0
                 ),
             )
-            
             return json.loads(response.text)
 
         except Exception as e:
@@ -306,31 +294,25 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
                 st.subheader("💰 Οικονομικά Στοιχεία")
                 
-                # Uploader Αρχείου (Δέχεται εικόνες και PDF)
                 uploaded_file = st.file_uploader("📂 Μεταφορτώστε τη Μισθοδοτική", type=['png', 'jpg', 'jpeg', 'pdf'], key=f"up_{fin_key}")
                 
-                # Φόρτωση υπαρχόντων δεδομένων από το CSV
                 fin_df = load_data(FINANCIALS_FILE, ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Σύνολο_Αποδ", "ΟΠΣΚΕ"])
                 ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
                 
-                # Δημιουργία dictionary για τις default τιμές
                 default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_df.columns if k != "ID_Κλειδί"}
                 
-                # Μηχανισμός ελέγχου με κουμπί χειροκίνητης έναρξης
                 if uploaded_file is not None:
-                    # Μοναδικό κλειδί μνήμης ανά αρχείο ΚΑΙ ανά υπάλληλο
                     file_fingerprint = f"{uploaded_file.name}_{uploaded_file.size}"
                     trigger_key = f"ocr_data_{fin_key}_{file_fingerprint}"
                     
-                    # Εμφάνιση του κουμπιού ανάλυσης
                     if st.button("🤖 Έναρξη Ανάλυσης AI", type="primary", use_container_width=True):
                         with st.spinner("⏳ Το AI μελετά το έγγραφο μισθοδοσίας..."):
                             ocr_data = extract_financials_with_ai(uploaded_file, emp_data['Ονοματεπώνυμο'])
                             if ocr_data:
                                 st.session_state[trigger_key] = ocr_data
-                                st.success("🎯 Η ανάλυση ολοκληρώθηκε!")
+                                # ΔΙΟΡΘΩΣΗ BUG: st.rerun() για να "ακουστούν" αμέσως οι τιμές στα inputs
+                                st.rerun()
                     
-                    # Αν υπάρχουν φρέσκα δεδομένα στη μνήμη του συγκεκριμένου trigger_key, τα εφαρμόζουμε
                     if trigger_key in st.session_state:
                         for k, v in st.session_state[trigger_key].items():
                             default_values[k] = v
@@ -357,19 +339,9 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                 c10.markdown(f"<div style='background-color:#e8f5e9; padding:10px; border-radius:5px; border:1px solid #4caf50; text-align:center; margin-top:15px;'><small>Έλεγχος Αθροίσματος</small><br><b>{calc_total:,.2f} €</b></div>", unsafe_allow_html=True)
 
                 if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
-                    # Αποθήκευση Ελέγχων (Checks)
                     new_ks = [r['ID_Κλειδί'] for r in all_results]
                     audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
                     save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
                     
-                    # Αποθήκευση Οικονομικών Στοιχείων (Financials)
                     fin_row = {"ID_Κλειδί": fin_key, "ΙΚΑ_Εργ": v_ika_erg, "ΙΚΑ_Εργοδ": v_ika_ergo, "ΤΕΚΑ_Εργ": v_teka_erg, "ΤΕΚΑ_Εργοδ": v_teka_ergo, "Σύνολο_Εισφ": v_sum_eisf, "ΦΜΥ": v_fmy, "Καθαρές": v_net, "Σύνολο_Αποδ": v_total_ap, "ΟΠΣΚΕ": v_opske}
-                    fin_df = pd.concat([fin_df[fin_df['ID_Κλειδί'] != fin_key], pd.DataFrame([fin_row])], ignore_index=True)
-                    save_to_csv(fin_df, FINANCIALS_FILE)
-                    
-                    # Καθαρισμός του OCR cache μετά την αποθήκευση
-                    if trigger_key in st.session_state:
-                        del st.session_state[trigger_key]
-                        
-                    st.session_state[f"success_emp_{fin_key}"] = True
-                    st.rerun()
+                    fin_df = pd.concat(
