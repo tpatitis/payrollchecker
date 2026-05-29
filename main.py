@@ -157,17 +157,17 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         
         # Αν έχουμε ήδη δεδομένα από το AI
         if trigger_key in st.session_state:
-        ocr_data = st.session_state[trigger_key]
+            ocr_data = st.session_state[trigger_key]
 
-    tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
+        tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
-    with tabs[0]:
-        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=default_values.get("Τακτικές_Αποδ", 0.0), format="%.2f", key="tab_0_main")
-        v_ika_erg0, v_ika_ergo0, v_teka_erg0, v_teka_ergo0, v_sum_eisf0, v_fmy0, v_net0, v_opske0 = render_financial_fields("tab0", default_values, ocr_data)
+        with tabs[0]:
+            v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=default_values.get("Τακτικές_Αποδ", 0.0), format="%.2f", key="tab_0_main")
+            v_ika_erg0, v_ika_ergo0, v_teka_erg0, v_teka_ergo0, v_sum_eisf0, v_fmy0, v_net0, v_opske0 = render_financial_fields("tab0", default_values, ocr_data)
 
-    with tabs[1]:
-        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values.get("Δώρο_Πάσχα", 0.0), format="%.2f", key="tab_1_main")
-        v_ika_erg1, v_ika_ergo1, v_teka_erg1, v_teka_ergo1, v_sum_eisf1, v_fmy1, v_net1, v_opske1 = render_financial_fields("tab1", default_values, ocr_data)
+        with tabs[1]:
+            v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values.get("Δώρο_Πάσχα", 0.0), format="%.2f", key="tab_1_main")
+            v_ika_erg1, v_ika_ergo1, v_teka_erg1, v_teka_ergo1, v_sum_eisf1, v_fmy1, v_net1, v_opske1 = render_financial_fields("tab1", default_values, ocr_data)
         
   # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
     st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Αναλυτικά Στοιχεία ανά Κατηγορία</p>", unsafe_allow_html=True)
