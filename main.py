@@ -1,3 +1,4 @@
+:::writing{variant="standard" id="48372"}
 ```python
 # ========================= IMPORTS =========================
 import streamlit as st
@@ -45,22 +46,23 @@ def save_to_csv(df, filename):
 
 ```python
 # ========================= AI SCHEMA =========================
+```python
 class PayrollFinancials(BaseModel):
 
     ΙΚΑ_Εργ: float = Field(
-        description="Οι κρατήσεις ή εισφορές του εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ)."
+        description="Οι κρατήσεις ή εισφορές του ασφαλισμένου/εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ)."
     )
 
     ΙΚΑ_Εργοδ: float = Field(
-        description="Οι εργοδοτικές εισφορές για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ)."
+        description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ)."
     )
 
     ΤΕΚΑ_Εργ: float = Field(
-        description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ. Αν δεν υπάρχει βάλε 0.0."
+        description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ."
     )
 
     ΤΕΚΑ_Εργοδ: float = Field(
-        description="Οι εργοδοτικές εισφορές για το ΤΕΚΑ. Αν δεν υπάρχει βάλε 0.0."
+        description="Οι εισφορές του εργοδότη για το ΤΕΚΑ."
     )
 
     Σύνολο_Εισφ: float = Field(
@@ -72,15 +74,15 @@ class PayrollFinancials(BaseModel):
     )
 
     Καθαρές: float = Field(
-        description="Οι καθαρές πληρωτέες αποδοχές του εργαζομένου."
+        description="Οι καθαρές αποδοχές."
     )
 
     Τακτικές_Αποδ: float = Field(
-        description="Οι μικτές τακτικές αποδοχές / βασικός μισθός."
+        description="Οι τακτικές αποδοχές / βασικός μισθός."
     )
 
     Υπερωρίες: float = Field(
-        description="Ποσό υπερωριών ή υπερεργασίας."
+        description="Ποσό υπερωριών."
     )
 
     Δώρο_Πάσχα: float = Field(
@@ -96,7 +98,7 @@ class PayrollFinancials(BaseModel):
     )
 
     Λοιπά_Αποδ: float = Field(
-        description="Bonus, αναδρομικά ή λοιπές αποδοχές."
+        description="Bonus ή λοιπές αποδοχές."
     )
 
     Σύνολο_Αποδ: float = Field(
