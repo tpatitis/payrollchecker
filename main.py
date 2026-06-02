@@ -121,7 +121,21 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # Ελέγχεις τι περιέχει το default_values
     st.write("Default Values loaded:", default_values)
+    # Χρησιμοποιούμε τις default τιμές στο input
+    tak_ap_value = st.number_input(
+        "Βασικός Μισθός (€)",
+        value=default_values.get("Τακτικές_Αποδ", 0.0),
+        format="%.2f",
+        key="tab0_main"
+    )
 
+    # Αποθήκευση της τελικής τιμής για χρήση στα αναλυτικά στοιχεία
+    # (π.χ., σε ένα λεξικό ή DataFrame)
+    # π.χ.
+    analytics_data = {
+        "Βασικός Μισθός (€)": tak_ap_value,
+        # προσθέτεις και άλλα πεδία
+    }
 
     # --- ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI OCR ---
     st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
