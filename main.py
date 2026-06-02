@@ -119,7 +119,18 @@ def render_financial_fields(tab_prefix, current_values):
         "ΟΠΣΚΕ": opsk
     }
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
-    # ΜΗΝ ξαναδηλώνεις τις load_data/save_to_csv εδώ. Χρησιμοποίησε τις global.
+    # --- ΠΡΟΣΘΗΚΗ OCR UPLOADER ---
+    st.subheader("📄 Αυτόματη Ανάγνωση Μισθοδοσίας")
+    uploaded_file = st.file_uploader("Ανέβασε αρχείο μισθοδοσίας (PDF/Image)", type=['pdf', 'png', 'jpg'], key=f"upload_{fin_key}")
+    
+    if uploaded_file is not None:
+        if st.button("🚀 Ανάλυση με AI"):
+            with st.spinner("Αναλύω το έγγραφο..."):
+                ocr_results = extract_financials_with_ai_stage3(uploaded_file, emp_data["Ονοματεπώνυμο"])
+                if ocr_results:
+                    st.session_state[f"ocr_data_{fin_key}"] = ocr_results
+                    st.success("✅ Τα δεδομένα εξήχθησαν επιτυχώς!")
+                    st.rerun() # Επανεκκίνηση για να εμφανιστούν οι τιμές στα πεδία
     
     # Φόρτωση δεδομένων
     fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
