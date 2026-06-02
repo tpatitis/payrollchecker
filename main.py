@@ -162,51 +162,25 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
     st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Αναλυτικά Στοιχεία ανά Κατηγορία</p>", unsafe_allow_html=True)
 
-    def render_financial_fields(v_main_input, tab_key):
+    def render_financial_fields(tab_key, current_values):
         c1, c2 = st.columns(2)
-        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f", key=f"ika_erg_{tab_key}")
-        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=default_values["ΙΚΑ_Εργοδ"], format="%.2f", key=f"ika_ergo_{tab_key}")
+        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=current_values["ΙΚΑ_Εργ"], format="%.2f", key=f"ika_erg_{tab_key}")
+        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=current_values["ΙΚΑ_Εργοδ"], format="%.2f", key=f"ika_ergo_{tab_key}")
 
         c3, c4 = st.columns(2)
-        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργ"], format="%.2f", key=f"teka_erg_{tab_key}")
-        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=default_values["ΤΕΚΑ_Εργοδ"], format="%.2f", key=f"teka_ergo_{tab_key}")
+        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=current_values["ΤΕΚΑ_Εργ"], format="%.2f", key=f"teka_erg_{tab_key}")
+        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=current_values["ΤΕΚΑ_Εργοδ"], format="%.2f", key=f"teka_ergo_{tab_key}")
 
         c5, c6, c7 = st.columns(3)
-        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=default_values["Σύνολο_Εισφ"], format="%.2f", key=f"sum_eisf_{tab_key}")
-        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=default_values["ΦΜΥ"], format="%.2f", key=f"fmy_{tab_key}")
-        v_net = c7.number_input("Καθαρές Αποδοχές", value=default_values["Καθαρές"], format="%.2f", key=f"net_{tab_key}")
+        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=current_values["Σύνολο_Εισφ"], format="%.2f", key=f"sum_eisf_{tab_key}")
+        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=current_values["ΦΜΥ"], format="%.2f", key=f"fmy_{tab_key}")
+        v_net = c7.number_input("Καθαρές Αποδοχές", value=current_values["Καθαρές"], format="%.2f", key=f"net_{tab_key}")
 
         st.markdown("---")
         c8, c9 = st.columns(2)
-        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=default_values["ΟΠΣΚΕ"], format="%.2f", key=f"opske_{tab_key}")
+        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=current_values["ΟΠΣΚΕ"], format="%.2f", key=f"opske_{tab_key}")
 
-        return v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske
-
-    # Δημιουργία tabs
-    tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
-
-    # Περιεχόμενο κάθε tab
-    with tabs[0]:
-        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=default_values["Τακτικές_Αποδ"], format="%.2f", key="tab_0_main")
-        (v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske) = render_financial_fields(v_tak_ap, "tab0")
-
-    with tabs[1]:
-        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values["Δώρο_Πάσχα"], format="%.2f", key="tab_1_main")
-        (v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske) = render_financial_fields(v_doro_pasxa, "tab1")
-
-    with tabs[2]:
-        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=default_values["Δώρο_Χριστουγέννων"], format="%.2f", key="tab_2_main")
-        (v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske) = render_financial_fields(v_doro_xrist, "tab2")
-
-    with tabs[3]:
-        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=default_values["Επίδομα_Άδειας"], format="%.2f", key="tab_3_main")
-        (v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske) = render_financial_fields(v_epidoma_ad, "tab3")
-
-    if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
-        # Αποθήκευση των δεδομένων
-        new_id = fin_key
-        fin_row = {
-            "ID_Κλειδί": new_id,
+        return {
             "ΙΚΑ_Εργ": v_ika_erg,
             "ΙΚΑ_Εργοδ": v_ika_ergo,
             "ΤΕΚΑ_Εργ": v_teka_erg,
@@ -214,27 +188,63 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
             "Σύνολο_Εισφ": v_sum_eisf,
             "ΦΜΥ": v_fmy,
             "Καθαρές": v_net,
-            "Τακτικές_Αποδ": v_tak_ap,
-            "Υπερωρίες": 0.0,
-            "Δώρο_Πάσχα": (v_doro_pasxa if 'v_doro_pasxa' in locals() else 0.0),
-            "Δώρο_Χριστουγέννων": (v_doro_xrist if 'v_doro_xrist' in locals() else 0.0),
-            "Επίδομα_Άδειας": (v_epidoma_ad if 'v_epidoma_ad' in locals() else 0.0),
-            "Λοιπά_Αποδ": 0.0,
-            "Σύνολο_Αποδ": v_total_ap,
             "ΟΠΣΚΕ": v_opske
         }
-        fin_df = load_data(FINANCIALS_FILE, fin_cols)
-        fin_df = fin_df[fin_df['ID_Κλειδί'] != fin_key]
-        fin_df = pd.concat([fin_df, pd.DataFrame([fin_row])], ignore_index=True)
-        save_to_csv(fin_df, FINANCIALS_FILE)
 
-        # Καθαρισμός session state
-        for key in list(st.session_state.keys()):
-            if key.startswith("ocr_data_"):
-                del st.session_state[key]
+    # Διατήρηση τρέχοντων δεδομένων σε session_state
+    if "financial_data" not in st.session_state:
+        st.session_state["financial_data"] = default_values.copy()
 
+    # Εμφάνιση tabs
+    tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
+
+    # Για κάθε tab, φορτώνουμε τα τρέχοντα δεδομένα και εμφανίζουμε τα πεδία
+    with tabs[0]:
+        current_values = st.session_state["financial_data"]
+        # Βασικός Μισθός
+        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=current_values["Τακτικές_Αποδ"], format="%.2f", key="tab_0_main")
+        # Συλλογή δεδομένων από τα πεδία
+        financials = render_financial_fields("tab0", current_values)
+        # Update session state
+        st.session_state["financial_data"].update(financials)
+        st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
+
+    with tabs[1]:
+        current_values = st.session_state["financial_data"]
+        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=current_values["Δώρο_Πάσχα"], format="%.2f", key="tab_1_main")
+        financials = render_financial_fields("tab1", current_values)
+        st.session_state["financial_data"].update(financials)
+        st.session_state["financial_data"]["Δώρο_Πάσχα"] = v_doro_pasxa
+
+    with tabs[2]:
+        current_values = st.session_state["financial_data"]
+        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=current_values["Δώρο_Χριστουγέννων"], format="%.2f", key="tab_2_main")
+        financials = render_financial_fields("tab2", current_values)
+        st.session_state["financial_data"].update(financials)
+        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = v_doro_xrist
+
+    with tabs[3]:
+        current_values = st.session_state["financial_data"]
+        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=current_values["Επίδομα_Άδειας"], format="%.2f", key="tab_3_main")
+        financials = render_financial_fields("tab3", current_values)
+        st.session_state["financial_data"].update(financials)
+        st.session_state["financial_data"]["Επίδομα_Άδειας"] = v_epidoma_ad
+
+    # Κουμπί αποθήκευσης
+    if st.button("💾 Αποθήκευση Όλων"):
+        # Αποθήκευση σε αρχείο ή βάση
+        fin_df = load_data("financials.csv", list(st.session_state["financial_data"].keys()))
+        # Δημιουργία DataFrame από τα τρέχοντα δεδομένα
+        fin_row = pd.DataFrame([st.session_state["financial_data"]])
+        # Αποθήκευση
+        fin_df = pd.concat([fin_df, fin_row], ignore_index=True)
+        save_to_csv(fin_df, "financials.csv")
         st.success("✅ Τα στοιχεία αποθηκεύτηκαν!")
-        st.rerun()
+
+    # Εμφάνιση τρεχόντων δεδομένων στα αναλυτικά στοιχεία
+    st.header("Τρεχόντα στοιχεία")
+    st.write(st.session_state["financial_data"])
+    
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
 page = st.sidebar.radio(
