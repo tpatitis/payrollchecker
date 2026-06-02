@@ -22,15 +22,14 @@ PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 
 # --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
 def load_data(filename, columns):
-    if not os.path.isfile(filename) or os.path.getsize(filename) == 0:
-        return pd.DataFrame(columns=columns)
     try:
-        return pd.read_csv(filename)
-    except Exception:
-        return pd.DataFrame(columns=columns)
+        df = pd.read_csv(filename)
+    except FileNotFoundError:
+        df = pd.DataFrame(columns=columns)
+    return df
 
 def save_to_csv(df, filename):
-    df.to_csv(filename, index=False, encoding='utf-8-sig')
+    df.to_csv(filename, index=False)
 
 # --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (STRUCTURED OUTPUT SCHEMA) ---
 class PayrollFinancials(BaseModel):
@@ -241,9 +240,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         save_to_csv(fin_df, "financials.csv")
         st.success("✅ Τα στοιχεία αποθηκεύτηκαν!")
 
-    # Εμφάνιση τρεχόντων δεδομένων στα αναλυτικά στοιχεία
-    st.header("Τρεχόντα στοιχεία")
-    st.write(st.session_state["financial_data"])
+    
     
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
