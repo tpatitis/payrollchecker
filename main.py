@@ -95,7 +95,29 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     except Exception as e:
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
+def render_financial_fields(tab_prefix, current_values):
+    """
+    Εμφανίζει τα πεδία εισαγωγής για τα οικονομικά στοιχεία.
+    Επιστρέφει ένα dictionary με τις τιμές που εισήγαγε ο χρήστης.
+    """
+    cols = st.columns(2)
+    with cols[0]:
+        ika_erg = st.number_input("ΙΚΑ Εργαζόμενου", value=current_values.get("ΙΚΑ_Εργ", 0.0), format="%.2f", key=f"{tab_prefix}_ika_erg")
+        ika_ergod = st.number_input("ΙΚΑ Εργοδότη", value=current_values.get("ΙΚΑ_Εργοδ", 0.0), format="%.2f", key=f"{tab_prefix}_ika_ergod")
+        teka_erg = st.number_input("ΤΕΚΑ Εργαζόμενου", value=current_values.get("ΤΕΚΑ_Εργ", 0.0), format="%.2f", key=f"{tab_prefix}_teka_erg")
+    with cols[1]:
+        fmy = st.number_input("ΦΜΥ", value=current_values.get("ΦΜΥ", 0.0), format="%.2f", key=f"{tab_prefix}_fmy")
+        kathares = st.number_input("Καθαρές Αποδοχές", value=current_values.get("Καθαρές", 0.0), format="%.2f", key=f"{tab_prefix}_kathares")
+        opsk = st.number_input("ΟΠΣΚΕ", value=current_values.get("ΟΠΣΚΕ", 0.0), format="%.2f", key=f"{tab_prefix}_opsk")
 
+    return {
+        "ΙΚΑ_Εργ": ika_erg,
+        "ΙΚΑ_Εργοδ": ika_ergod,
+        "ΤΕΚΑ_Εργ": teka_erg,
+        "ΦΜΥ": fmy,
+        "Καθαρές": kathares,
+        "ΟΠΣΚΕ": opsk
+    }
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
     # ΜΗΝ ξαναδηλώνεις τις load_data/save_to_csv εδώ. Χρησιμοποίησε τις global.
     
