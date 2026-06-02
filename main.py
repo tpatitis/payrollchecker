@@ -97,10 +97,12 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         return {}
 
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
-    global FINANCIALS_FILE 
-
+    # ΜΗΝ ξαναδηλώνεις τις load_data/save_to_csv εδώ. Χρησιμοποίησε τις global.
+    
     # Φόρτωση δεδομένων
     fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
+    
+    # Χρήση της global FINANCIALS_FILE που ορίστηκε στην αρχή του αρχείου
     fin_df = load_data(FINANCIALS_FILE, fin_cols)
 
     # Διασφάλιση ότι όλες οι στήλες υπάρχουν
@@ -180,20 +182,12 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # Κουμπί αποθήκευσης
     if st.button("💾 Αποθήκευση Όλων"):
-        # Φόρτωση ή δημιουργία DataFrame
-        def load_data(filename, columns):
-            try:
-                return pd.read_csv(filename)
-            except FileNotFoundError:
-                return pd.DataFrame(columns=columns)
-
-        def save_to_csv(df, filename):
-            df.to_csv(filename, index=False)
-
-        fin_df = load_data("financials.csv", list(st.session_state["financial_data"].keys()))
+        # ΑΦΑΙΡΕΣΕ ΤΟΝ ΕΠΑΝΑΟΡΙΣΜΟ ΤΩΝ ΣΥΝΑΡΤΗΣΕΩΝ ΕΔΩ
+        # Απλώς κάλεσε τις έτοιμες:
+        fin_df = load_data(FINANCIALS_FILE, list(st.session_state["financial_data"].keys()))
         fin_row = pd.DataFrame([st.session_state["financial_data"]])
         fin_df = pd.concat([fin_df, fin_row], ignore_index=True)
-        save_to_csv(fin_df, "financials.csv")
+        save_to_csv(fin_df, FINANCIALS_FILE)
         st.success("✅ Τα στοιχεία αποθηκεύτηκαν!")
     
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
