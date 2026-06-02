@@ -21,6 +21,7 @@ FINANCIALS_FILE = 'payroll_financials.csv'
 PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 
 # --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
+st.write("FINANCIALS_FILE:", FINANCIALS_FILE)
 def load_data(filename, columns):
     try:
         df = pd.read_csv(filename)
