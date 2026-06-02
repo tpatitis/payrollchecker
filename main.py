@@ -17,11 +17,12 @@ st.set_page_config(
 PROJECTS_FILE = 'data_projects.csv'
 CHECKLIST_FILE = 'checklist_results.csv'
 EMPLOYEES_FILE = 'data_employees.csv'
+
+# Ορίστε τα αρχεία που θα χρησιμοποιείτε
 FINANCIALS_FILE = 'payroll_financials.csv'
 PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 
 # --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
-st.write("FINANCIALS_FILE:", FINANCIALS_FILE)
 def load_data(filename, columns):
     try:
         df = pd.read_csv(filename)
@@ -98,20 +99,23 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
     """Συνάρτηση σχεδίασης του UI για το Στάδιο 3 με αυτόματη φόρτωση δεδομένων από AI"""
 
-    # Φόρτωση δεδομένων ήδη αποθηκευμένων
+    # Ορισμός των σταθερών αρχείων δεδομένων εδώ
+    global FINANCIALS_FILE
+
+    # Φόρτωση δεδομένων
     fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
     fin_df = load_data(FINANCIALS_FILE, fin_cols)
 
-    # Εξασφάλιση ότι όλες οι στήλες υπάρχουν
+    # Διασφάλιση ότι όλες οι στήλες υπάρχουν
     for col in fin_cols:
         if col not in fin_df.columns:
             fin_df[col] = 0.0
 
-    # Βρίσκουμε τα τρέχοντα δεδομένα
+    # Εύρεση τρέχοντων δεδομένων
     ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
     default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_cols if k != "ID_Κλειδί"}
         
-    # Αν υπάρχει αποτελέσμα από OCR, το περνάμε ως default τιμές
+    # Αν υπάρχει OCR data, το περνάμε ως default
     trigger_key = f"ocr_data_{fin_key}"
     if trigger_key in st.session_state:
         ocr_data = st.session_state[trigger_key]
@@ -119,111 +123,32 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
             if k in ocr_data:
                 default_values[k] = ocr_data[k]
 
-    # Ελέγχεις τι περιέχει το default_values
+    # Εμφάνιση default values για debugging
     st.write("Default Values loaded:", default_values)
-    # Χρησιμοποιούμε τις default τιμές στο input
-    tak_ap_value = st.number_input(
+
+    # Χρησιμοποιούμε τις default τιμές στα inputs
+    v_tak_ap_value = st.number_input(
         "Βασικός Μισθός (€)",
         value=default_values.get("Τακτικές_Αποδ", 0.0),
         format="%.2f",
         key="tab0_main"
     )
 
-    # Αποθήκευση της τελικής τιμής για χρήση στα αναλυτικά στοιχεία
-    # (π.χ., σε ένα λεξικό ή DataFrame)
-    # π.χ.
-    analytics_data = {
-        "Βασικός Μισθός (€)": tak_ap_value,
-        # προσθέτεις και άλλα πεδία
+    # Αποθήκευση της τελικής τιμής
+    st.session_state["financial_data"] = {
+        "ΙΚΑ_Εργ": 0.0,
+        "ΙΚΑ_Εργοδ": 0.0,
+        "ΤΕΚΑ_Εργ": 0.0,
+        "ΤΕΚΑ_Εργοδ": 0.0,
+        "Σύνολο_Εισφ": 0.0,
+        "ΦΜΥ": 0.0,
+        "Καθαρές": 0.0,
+        "ΟΠΣΚΕ": 0.0,
+        "Τακτικές_Αποδ": v_tak_ap_value,
+        "Δώρο_Πάσχα": 0.0,
+        "Δώρο_Χριστουγέννων": 0.0,
+        "Επίδομα_Άδειας": 0.0
     }
-
-    # --- ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI OCR ---
-    st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
-    st.subheader("💰 Οικονομικά Στοιχεία")
-
-    uploaded_file = st.file_uploader("📂 Μεταφορτώστε τη Μισθοδοτική", type=['png', 'jpg', 'jpeg', 'pdf'], key=f"up_{fin_key}")
-
-    if uploaded_file:
-        file_fingerprint = f"{uploaded_file.name}_{uploaded_file.size}"
-        trigger_ai = f"ocr_data_{fin_key}"
-        if st.button("🤖 Έναρξη Ανάλυσης AI", type="primary", use_container_width=True):
-            with st.spinner("⏳ Το AI μελετά το έγγραφο μισθοδοσίας..."):
-                ocr_data = extract_financials_with_ai_stage3(uploaded_file, emp_data['Ονοματεπώνυμο'])
-                if ocr_data:
-                    st.session_state[trigger_ai] = ocr_data
-                    st.success("🎯 Η ανάλυση ολοκληρώθηκε!")
-
-        # Αν έχουμε αποτελέσματα από OCR, τα εμφανίζουμε και τα περνάμε στα default values
-        if trigger_ai in st.session_state:
-            for k, v in st.session_state[trigger_ai].items():
-                if k in default_values:
-                    default_values[k] = v
-
-    # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
-    st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Αναλυτικά Στοιχεία ανά Κατηγορία</p>", unsafe_allow_html=True)
-
-    def render_financial_fields(tab_key, current_values):
-        c1, c2 = st.columns(2)
-        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", 
-                                     value=current_values["ΙΚΑ_Εργ"], 
-                                     format="%.2f", key=f"ika_erg_{tab_key}")
-        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", 
-                                      value=current_values["ΙΚΑ_Εργοδ"], 
-                                      format="%.2f", key=f"ika_ergo_{tab_key}")
-
-        c3, c4 = st.columns(2)
-        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", 
-                                        value=current_values["ΤΕΚΑ_Εργ"], 
-                                        format="%.2f", key=f"teka_erg_{tab_key}")
-        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", 
-                                        value=current_values["ΤΕΚΑ_Εργοδ"], 
-                                        format="%.2f", key=f"teka_ergo_{tab_key}")
-
-        c5, c6, c7 = st.columns(3)
-        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", 
-                                      value=current_values["Σύνολο_Εισφ"], 
-                                      format="%.2f", key=f"sum_eisf_{tab_key}")
-        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", 
-                                  value=current_values["ΦΜΥ"], 
-                                  format="%.2f", key=f"fmy_{tab_key}")
-        v_net = c7.number_input("Καθαρές Αποδοχές", 
-                                  value=current_values["Καθαρές"], 
-                                  format="%.2f", key=f"net_{tab_key}")
-
-        st.markdown("---")
-        c8, c9 = st.columns(2)
-        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", 
-                                   value=current_values["ΟΠΣΚΕ"], 
-                                   format="%.2f", key=f"opske_{tab_key}")
-
-        # Επιστρέφουμε τις τιμές που εισήγαγε ο χρήστης
-        return {
-            "ΙΚΑ_Εργ": v_ika_erg,
-            "ΙΚΑ_Εργοδ": v_ika_ergo,
-            "ΤΕΚΑ_Εργ": v_teka_erg,
-            "ΤΕΚΑ_Εργοδ": v_teka_ergo,
-            "Σύνολο_Εισφ": v_sum_eisf,
-            "ΦΜΥ": v_fmy,
-            "Καθαρές": v_net,
-            "ΟΠΣΚΕ": v_opske
-        }
-    
-    # Αν δεν υπάρχει ήδη, δημιουργούμε το αρχικό dictionary
-    if "financial_data" not in st.session_state:
-        st.session_state["financial_data"] = {
-            "ΙΚΑ_Εργ": 0.0,
-            "ΙΚΑ_Εργοδ": 0.0,
-            "ΤΕΚΑ_Εργ": 0.0,
-            "ΤΕΚΑ_Εργοδ": 0.0,
-            "Σύνολο_Εισφ": 0.0,
-            "ΦΜΥ": 0.0,
-            "Καθαρές": 0.0,
-            "ΟΠΣΚΕ": 0.0,
-            "Τακτικές_Αποδ": 0.0,
-            "Δώρο_Πάσχα": 0.0,
-            "Δώρο_Χριστουγέννων": 0.0,
-            "Επίδομα_Άδειας": 0.0
-        }
 
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
