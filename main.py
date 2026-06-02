@@ -96,46 +96,28 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         return {}
 
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
-    """Συνάρτηση σχεδίασης του UI για το Στάδιο 3"""
-    # --- ΕΛΕΓΧΟΣ ΔΙΚΑΙΟΛΟΓΗΤΙΚΩΝ ---
-    audit_df = load_data(PAYROLL_CHECKS_FILE, ["ID_Κλειδί", "Έγγραφο", "Κατάσταση", "Σχόλιο"])
-    if not audit_df.empty:
-        audit_df['Σχόλιο'] = audit_df['Σχόλιο'].fillna('').astype(str).str.replace('nan', '', case=False)
+    """Συνάρτηση σχεδίασης του UI για το Στάδιο 3 με αυτόματη φόρτωση δεδομένων από AI"""
 
-    all_results = []
+    # Φόρτωση δεδομένων ήδη αποθηκευμένων
+    fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
+    fin_df = load_data(FINANCIALS_FILE, fin_cols)
 
-    def draw_row(label, key_id):
-        existing = audit_df[audit_df['ID_Κλειδί'] == key_id]
-        c1, c2, c3 = st.columns([1.5, 1, 2], gap="small")
-        c1.markdown(f"<div style='font-size:0.85rem; padding-top:5px;'>{label}</div>", unsafe_allow_html=True)
-        stat = c2.selectbox(
-            "",
-            ["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"],
-            index=["Έλλειψη ❌", "Υπάρχει ✅", "Δεν απαιτείται"].index(existing['Κατάσταση'].iloc[0]) if not existing.empty else 0,
-            key=f"s_{key_id}",
-            label_visibility="collapsed"
-        )
+    # Εξασφάλιση ότι όλες οι στήλες υπάρχουν
+    for col in fin_cols:
+        if col not in fin_df.columns:
+            fin_df[col] = 0.0
 
-        val_note = existing['Σχόλιο'].iloc[0] if not existing.empty else ""
-        if val_note.lower() == 'nan':
-            val_note = ""
+    # Βρίσκουμε τα τρέχοντα δεδομένα
+    ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
+    default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_cols if k != "ID_Κλειδί"}
 
-        note = c3.text_input(
-            "",
-            value=val_note,
-            key=f"n_{key_id}",
-            label_visibility="collapsed",
-            placeholder="Σημειώσεις..."
-        )
-        return {"ID_Κλειδί": key_id, "Έγγραφο": label, "Κατάσταση": stat, "Σχόλιο": note}
-
-    st.caption("📌 ΚΕΝΤΡΙΚΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ")
-    all_results.append(draw_row("Αναγγελία Πρόσληψης (Ε3)", f"PERM_{selected_afm}_{emp_data['ΑΦΜ']}_E3"))
-    all_results.append(draw_row("Ταυτότητα Εργαζομένου", f"PERM_{selected_afm}_{emp_data['ΑΦΜ']}_ID"))
-
-    st.caption(f"📅 ΜΗΝΙΑΙΑ ΠΑΡΑΔΟΤΕΑ ({period})")
-    for md in ["Extrait", "Έμβασμα Πληρωμής", "Λογιστικό άρθρο καταχώρησης", "Λογιστικό άρθρο πληρωμής", "Βιβλίο εσόδων-εξόδων"]:
-        all_results.append(draw_row(md, f"MONTH_{selected_afm}_{emp_data['ΑΦΜ']}_{period}_{md}"))
+    # Αν υπάρχει αποτελέσμα από OCR, το περνάμε ως default τιμές
+    trigger_key = f"ocr_data_{fin_key}"
+    if trigger_key in st.session_state:
+        ocr_data = st.session_state[trigger_key]
+        for k in default_values:
+            if k in ocr_data:
+                default_values[k] = ocr_data[k]
 
     # --- ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI OCR ---
     st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
@@ -143,37 +125,25 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     uploaded_file = st.file_uploader("📂 Μεταφορτώστε τη Μισθοδοτική", type=['png', 'jpg', 'jpeg', 'pdf'], key=f"up_{fin_key}")
 
-    fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
-    fin_df = load_data(FINANCIALS_FILE, fin_cols)
-
-    # Εξασφάλιση συμβατότητας στηλών
-    for col in fin_cols:
-        if col not in fin_df.columns:
-            fin_df[col] = 0.0
-
-    ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
-    default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_cols if k != "ID_Κλειδί"}
-
-    if uploaded_file is not None:
+    if uploaded_file:
         file_fingerprint = f"{uploaded_file.name}_{uploaded_file.size}"
-        trigger_key = f"ocr_data_{fin_key}_{file_fingerprint}"
-
+        trigger_ai = f"ocr_data_{fin_key}"
         if st.button("🤖 Έναρξη Ανάλυσης AI", type="primary", use_container_width=True):
             with st.spinner("⏳ Το AI μελετά το έγγραφο μισθοδοσίας..."):
                 ocr_data = extract_financials_with_ai_stage3(uploaded_file, emp_data['Ονοματεπώνυμο'])
                 if ocr_data:
-                    st.session_state[trigger_key] = ocr_data
+                    st.session_state[trigger_ai] = ocr_data
                     st.success("🎯 Η ανάλυση ολοκληρώθηκε!")
 
-        if trigger_key in st.session_state:
-            for k, v in st.session_state[trigger_key].items():
+        # Αν έχουμε αποτελέσματα από OCR, τα εμφανίζουμε και τα περνάμε στα default values
+        if trigger_ai in st.session_state:
+            for k, v in st.session_state[trigger_ai].items():
                 if k in default_values:
                     default_values[k] = v
 
     # --- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΟΔΟΧΩΝ ΜΕ TABS ---
     st.markdown("<p style='font-size:1rem; font-weight:bold; color:#333; margin-top:15px; margin-bottom:5px;'>📊 Αναλυτικά Στοιχεία ανά Κατηγορία</p>", unsafe_allow_html=True)
 
-    # Βοηθητική συνάρτηση για τα πεδία που εμφανίζονται σε κάθε tab
     def render_financial_fields(v_main_input, tab_key):
         c1, c2 = st.columns(2)
         v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=default_values["ΙΚΑ_Εργ"], format="%.2f", key=f"ika_erg_{tab_key}")
@@ -190,37 +160,35 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
         st.markdown("---")
         c8, c9 = st.columns(2)
-        # Προσοχή: Το disabled widget δεν χρειάζεται key συνήθως, αλλά αν δημιουργεί θέμα, πρόσθεσε ένα
-        c8.number_input("Σύνολο Αποδοχών (Μικτά)", value=v_main_input, format="%.2f", disabled=True, key=f"total_ap_{tab_key}")
         v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=default_values["ΟΠΣΚΕ"], format="%.2f", key=f"opske_{tab_key}")
 
         return v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske
 
+    # Δημιουργία tabs
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
+    # Περιεχόμενο κάθε tab
     with tabs[0]:
         v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=default_values["Τακτικές_Αποδ"], format="%.2f", key="tab_0_main")
-        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_tak_ap, "tab0")
+        (v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske) = render_financial_fields(v_tak_ap, "tab0")
 
     with tabs[1]:
         v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=default_values["Δώρο_Πάσχα"], format="%.2f", key="tab_1_main")
-        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_doro_pasxa, "tab1")
+        (v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske) = render_financial_fields(v_doro_pasxa, "tab1")
 
     with tabs[2]:
         v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=default_values["Δώρο_Χριστουγέννων"], format="%.2f", key="tab_2_main")
-        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_doro_xrist, "tab2")
+        (v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske) = render_financial_fields(v_doro_xrist, "tab2")
 
     with tabs[3]:
         v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=default_values["Επίδομα_Άδειας"], format="%.2f", key="tab_3_main")
-        v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske = render_financial_fields(v_epidoma_ad, "tab3")
+        (v_ika_erg, v_ika_ergo, v_teka_erg, v_teka_ergo, v_sum_eisf, v_fmy, v_net, v_opske) = render_financial_fields(v_epidoma_ad, "tab3")
 
     if st.button("💾 Αποθήκευση Όλων", use_container_width=True):
-        new_ks = [r['ID_Κλειδί'] for r in all_results]
-        audit_df = pd.concat([audit_df[~audit_df['ID_Κλειδί'].isin(new_ks)], pd.DataFrame(all_results)], ignore_index=True)
-        save_to_csv(audit_df, PAYROLL_CHECKS_FILE)
-
+        # Αποθήκευση των δεδομένων
+        new_id = fin_key
         fin_row = {
-            "ID_Κλειδί": fin_key,
+            "ID_Κλειδί": new_id,
             "ΙΚΑ_Εργ": v_ika_erg,
             "ΙΚΑ_Εργοδ": v_ika_ergo,
             "ΤΕΚΑ_Εργ": v_teka_erg,
@@ -229,26 +197,26 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
             "ΦΜΥ": v_fmy,
             "Καθαρές": v_net,
             "Τακτικές_Αποδ": v_tak_ap,
-            "Υπερωρίες": 0.0,  # Αν χρειάζεται, πρόσθεσε αντίστοιχα
-            "Δώρο_Πάσχα": v_doro_pasxa,
-            "Δώρο_Χριστουγέννων": v_doro_xrist,
-            "Επίδομα_Άδειας": v_epidoma_ad,
-            "Λοιπά_Αποδ": 0.0,  # Αν χρειάζεται
-            "Σύνολο_Αποδ": v_tak_ap + v_doro_pasxa + v_doro_xrist + v_epidoma_ad,
+            "Υπερωρίες": 0.0,
+            "Δώρο_Πάσχα": (v_doro_pasxa if 'v_doro_pasxa' in locals() else 0.0),
+            "Δώρο_Χριστουγέννων": (v_doro_xrist if 'v_doro_xrist' in locals() else 0.0),
+            "Επίδομα_Άδειας": (v_epidoma_ad if 'v_epidoma_ad' in locals() else 0.0),
+            "Λοιπά_Αποδ": 0.0,
+            "Σύνολο_Αποδ": v_total_ap,
             "ΟΠΣΚΕ": v_opske
         }
-        fin_df = load_data(FINANCIALS_FILE, ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"])
-        fin_df = pd.concat([fin_df[fin_df['ID_Κλειδί'] != fin_key], pd.DataFrame([fin_row])], ignore_index=True)
+        fin_df = load_data(FINANCIALS_FILE, fin_cols)
+        fin_df = fin_df[fin_df['ID_Κλειδί'] != fin_key]
+        fin_df = pd.concat([fin_df, pd.DataFrame([fin_row])], ignore_index=True)
         save_to_csv(fin_df, FINANCIALS_FILE)
 
-        # Καθαρισμός session state αν χρειάζεται
+        # Καθαρισμός session state
         for key in list(st.session_state.keys()):
             if key.startswith("ocr_data_"):
                 del st.session_state[key]
 
         st.success("✅ Τα στοιχεία αποθηκεύτηκαν!")
         st.rerun()
-
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
 page = st.sidebar.radio(
