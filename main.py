@@ -110,7 +110,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # Βρίσκουμε τα τρέχοντα δεδομένα
     ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
     default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_cols if k != "ID_Κλειδί"}
-
+        
     # Αν υπάρχει αποτελέσμα από OCR, το περνάμε ως default τιμές
     trigger_key = f"ocr_data_{fin_key}"
     if trigger_key in st.session_state:
@@ -118,6 +118,10 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         for k in default_values:
             if k in ocr_data:
                 default_values[k] = ocr_data[k]
+
+    # Ελέγχεις τι περιέχει το default_values
+    st.write("Default Values loaded:", default_values)
+
 
     # --- ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ & AI OCR ---
     st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
