@@ -163,22 +163,39 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     def render_financial_fields(tab_key, current_values):
         c1, c2 = st.columns(2)
-        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", value=current_values["ΙΚΑ_Εργ"], format="%.2f", key=f"ika_erg_{tab_key}")
-        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", value=current_values["ΙΚΑ_Εργοδ"], format="%.2f", key=f"ika_ergo_{tab_key}")
+        v_ika_erg = c1.number_input("Εισφορές Εργαζομένου ΙΚΑ", 
+                                     value=current_values["ΙΚΑ_Εργ"], 
+                                     format="%.2f", key=f"ika_erg_{tab_key}")
+        v_ika_ergo = c2.number_input("Εισφορές Εργοδότη ΙΚΑ", 
+                                      value=current_values["ΙΚΑ_Εργοδ"], 
+                                      format="%.2f", key=f"ika_ergo_{tab_key}")
 
         c3, c4 = st.columns(2)
-        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", value=current_values["ΤΕΚΑ_Εργ"], format="%.2f", key=f"teka_erg_{tab_key}")
-        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", value=current_values["ΤΕΚΑ_Εργοδ"], format="%.2f", key=f"teka_ergo_{tab_key}")
+        v_teka_erg = c3.number_input("Εισφορές Εργαζομένου ΤΕΚΑ", 
+                                        value=current_values["ΤΕΚΑ_Εργ"], 
+                                        format="%.2f", key=f"teka_erg_{tab_key}")
+        v_teka_ergo = c4.number_input("Εισφορές Εργοδότη ΤΕΚΑ", 
+                                        value=current_values["ΤΕΚΑ_Εργοδ"], 
+                                        format="%.2f", key=f"teka_ergo_{tab_key}")
 
         c5, c6, c7 = st.columns(3)
-        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", value=current_values["Σύνολο_Εισφ"], format="%.2f", key=f"sum_eisf_{tab_key}")
-        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", value=current_values["ΦΜΥ"], format="%.2f", key=f"fmy_{tab_key}")
-        v_net = c7.number_input("Καθαρές Αποδοχές", value=current_values["Καθαρές"], format="%.2f", key=f"net_{tab_key}")
+        v_sum_eisf = c5.number_input("Σύνολο Εισφορών", 
+                                      value=current_values["Σύνολο_Εισφ"], 
+                                      format="%.2f", key=f"sum_eisf_{tab_key}")
+        v_fmy = c6.number_input("ΦΜΥ Εργαζομένου", 
+                                  value=current_values["ΦΜΥ"], 
+                                  format="%.2f", key=f"fmy_{tab_key}")
+        v_net = c7.number_input("Καθαρές Αποδοχές", 
+                                  value=current_values["Καθαρές"], 
+                                  format="%.2f", key=f"net_{tab_key}")
 
         st.markdown("---")
         c8, c9 = st.columns(2)
-        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", value=current_values["ΟΠΣΚΕ"], format="%.2f", key=f"opske_{tab_key}")
+        v_opske = c9.number_input("Αιτούμενο ΟΠΣΚΕ", 
+                                   value=current_values["ΟΠΣΚΕ"], 
+                                   format="%.2f", key=f"opske_{tab_key}")
 
+        # Επιστρέφουμε τις τιμές που εισήγαγε ο χρήστης
         return {
             "ΙΚΑ_Εργ": v_ika_erg,
             "ΙΚΑ_Εργοδ": v_ika_ergo,
@@ -189,22 +206,31 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
             "Καθαρές": v_net,
             "ΟΠΣΚΕ": v_opske
         }
-
-    # Διατήρηση τρέχοντων δεδομένων σε session_state
+    
+    # Αν δεν υπάρχει ήδη, δημιουργούμε το αρχικό dictionary
     if "financial_data" not in st.session_state:
-        st.session_state["financial_data"] = default_values.copy()
+        st.session_state["financial_data"] = {
+            "ΙΚΑ_Εργ": 0.0,
+            "ΙΚΑ_Εργοδ": 0.0,
+            "ΤΕΚΑ_Εργ": 0.0,
+            "ΤΕΚΑ_Εργοδ": 0.0,
+            "Σύνολο_Εισφ": 0.0,
+            "ΦΜΥ": 0.0,
+            "Καθαρές": 0.0,
+            "ΟΠΣΚΕ": 0.0,
+            "Τακτικές_Αποδ": 0.0,
+            "Δώρο_Πάσχα": 0.0,
+            "Δώρο_Χριστουγέννων": 0.0,
+            "Επίδομα_Άδειας": 0.0
+        }
 
-    # Εμφάνιση tabs
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
-    # Για κάθε tab, φορτώνουμε τα τρέχοντα δεδομένα και εμφανίζουμε τα πεδία
+    # Για κάθε tab, φορτώνουμε τα τρέχοντα values και τα εμφανίζουμε
     with tabs[0]:
         current_values = st.session_state["financial_data"]
-        # Βασικός Μισθός
         v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=current_values["Τακτικές_Αποδ"], format="%.2f", key="tab_0_main")
-        # Συλλογή δεδομένων από τα πεδία
         financials = render_financial_fields("tab0", current_values)
-        # Update session state
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
 
@@ -231,16 +257,21 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # Κουμπί αποθήκευσης
     if st.button("💾 Αποθήκευση Όλων"):
-        # Αποθήκευση σε αρχείο ή βάση
+        # Φόρτωση ή δημιουργία DataFrame
+        def load_data(filename, columns):
+            try:
+                return pd.read_csv(filename)
+            except FileNotFoundError:
+                return pd.DataFrame(columns=columns)
+
+        def save_to_csv(df, filename):
+            df.to_csv(filename, index=False)
+
         fin_df = load_data("financials.csv", list(st.session_state["financial_data"].keys()))
-        # Δημιουργία DataFrame από τα τρέχοντα δεδομένα
         fin_row = pd.DataFrame([st.session_state["financial_data"]])
-        # Αποθήκευση
         fin_df = pd.concat([fin_df, fin_row], ignore_index=True)
         save_to_csv(fin_df, "financials.csv")
         st.success("✅ Τα στοιχεία αποθηκεύτηκαν!")
-
-    
     
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
