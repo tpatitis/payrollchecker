@@ -366,7 +366,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
 
                     if st.button("Οριστική Διαγραφή", type="primary", key="del_emp_btn"):
                         emp_df = emp_df[emp_df['ID'].astype(str) != str(target_del_id)]
-                        save_to_csv(emp_df, EMPLOYEES_FILE)
+                        save_to_csv(emp_df, emp_file)
                         st.success("Ο υπάλληλος διαγράφηκε!")
                         st.rerun()
 
