@@ -213,55 +213,29 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # --- TAB 0: Τακτικές αποδοχές ---
     ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
     
-    # --- TAB 0 ---
-    with tabs[0]:
-        # Πάρε το sub-dictionary "Τακτικές"
-        group_data = ocr_data.get("Τακτικές", {}) 
-        tak_data = render_financial_fields(f"{fin_key}_tab0", group_data)
-        st.session_state["financial_data"]["Τακτικές"] = tak_data
-        
-    # --- TAB 1 (Πάσχα) ---
-    with tabs[1]:
-        group_data = ocr_data.get("Δώρο_Πάσχα", {})
-        doro_pasxa_data = render_financial_fields(f"{fin_key}_pasxa", group_data)
-        st.session_state["financial_data"]["Δώρο_Πάσχα"] = doro_pasxa_data
-   
-    # --- TAB 2: Δώρο Χριστουγέννων ---
-    with tabs[2]:
-        group_data = ocr_data.get("Δώρο_Χριστουγέννων", {})
-        doro_xrist_data = render_financial_fields(f"{fin_key}_xrist", group_data)
-        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = doro_xrist_data   
-    
-    # --- TAB 3: Επίδομα αδείας ---
-    with tabs[3]:
-        group_data = ocr_data.get("Επίδομα_Άδειας", {})
-        epidom_data = render_financial_fields(f"{fin_key}_epidom", group_data)
-        st.session_state["financial_data"]["Επίδομα_Άδειας"] = epidom_data   
-        
-    if st.button("💾 Αποθήκευση Όλων"):
-        # Δημιουργία flat dictionary για το CSV
-        flat_data = {"ID_Κλειδί": fin_key}
-    
-        # Προσθήκη όλων των επιμέρους στοιχείων (π.χ. Δώρο_Πάσχα_ΙΚΑ_Εργ)
-        for group_name, group_dict in st.session_state["financial_data"].items():
-            if isinstance(group_dict, dict):
-                for field, val in group_dict.items():
-                    flat_data[f"{group_name}_{field}"] = val
-            else:
-                flat_data[group_name] = group_dict
+    # Δημιουργία χαρτογράφησης μεταξύ Tab και κλειδιού στο JSON
+    tab_mapping = {
+        0: "Τακτικές",
+        1: "Δώρο_Πάσχα",
+        2: "Δώρο_Χριστουγέννων",
+        3: "Επίδομα_Άδειας"
+    }
+
+    for i, tab in enumerate(tabs):
+        with tab:
+            key_in_json = tab_mapping[i]
+            # ΕΔΩ ΕΙΝΑΙ ΤΟ ΚΛΕΙΔΙ: Εξάγουμε το dictionary αν υπάρχει, αλλιώς άδειο dict
+            group_data = ocr_data.get(key_in_json, {})
             
-        # 3. Φόρτωση, ενημέρωση και αποθήκευση στο CSV
-        fin_df = load_data(FINANCIALS_FILE, list(flat_row.keys()))
-        
-        # Αφαιρούμε παλιά εγγραφή για το ίδιο ID αν υπάρχει
-        fin_df = fin_df[fin_df['ID_Κλειδί'] != fin_key]
-        
-        # Προσθήκη νέας γραμμής
-        new_row = pd.DataFrame([flat_row])
-        fin_df = pd.concat([fin_df, new_row], ignore_index=True)
-        
-        save_to_csv(fin_df, FINANCIALS_FILE)
-        st.success("✅ Τα στοιχεία αποθηκεύτηκαν επιτυχώς στο CSV!")
+            # Αν το group_data είναι Pydantic model (από το API), μετατροπή σε dict
+            if hasattr(group_data, 'model_dump'):
+                group_data = group_data.model_dump()
+            
+            # Εμφάνιση πεδίων
+            data_captured = render_financial_fields(f"{fin_key}_{key_in_json}", group_data)
+            
+            # Αποθήκευση
+            st.session_state["financial_data"][key_in_json] = data_captured
     
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
