@@ -41,7 +41,7 @@ class FinancialGroup(BaseModel):
     ΤΕΚΑ_Εργοδότη: float = 0.0
     Σύνολο_Εισφορών: float = 0.0
     ΦΜΥ: float = 0.0
-    Καθαρές αποδοχές: float = 0.0
+    Καθαρές_αποδοχές: float = 0.0
     Σύνολο_Κόστος: float = 0.0
 
 class PayrollFinancials(BaseModel):
