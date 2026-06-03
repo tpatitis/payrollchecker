@@ -153,15 +153,15 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     uploaded_file = st.file_uploader("Ανέβασε αρχείο (PDF/Image)", type=['pdf', 'png', 'jpg'], key=f"upload_{fin_key}")
     
     if uploaded_file and st.button("🚀 Ανάλυση με AI"):
-    with st.spinner("Αναλύω..."):
-        ocr_results = extract_financials_with_ai_stage3(uploaded_file, emp_data["Ονοματεπώνυμο"])
+        with st.spinner("Αναλύω..."):
+            ocr_results = extract_financials_with_ai_stage3(uploaded_file, emp_data["Ονοματεπώνυμο"])
         
-        if ocr_results:
-            file_period = ocr_results.get("Περίοδος_Αρχείου", "")
+            if ocr_results:
+                file_period = ocr_results.get("Περίοδος_Αρχείου", "")
             
-            # ΕΛΕΓΧΟΣ
-            if file_period.strip() != period.strip():
-                st.warning(f"⚠️ Προσοχή: Η περίοδος στο έγγραφο ({file_period}) διαφέρει από την περίοδο ελέγχου ({period}).")
+                # ΕΛΕΓΧΟΣ
+                if file_period.strip() != period.strip():
+                    st.warning(f"⚠️ Προσοχή: Η περίοδος στο έγγραφο ({file_period}) διαφέρει από την περίοδο ελέγχου ({period}).")
                 
                 # Επιλογή διόρθωσης
                 use_file_period = st.checkbox("Χρήση περιόδου αρχείου αντί για του Sidebar;", value=False)
