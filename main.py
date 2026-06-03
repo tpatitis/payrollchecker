@@ -73,21 +73,20 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     try:
         response = client.chat.completions.create(
             model="llama-3.2-90b-vision-preview",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Ανάλυσε το επισυναπτόμενο έγγραφο."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                    ]
-                }
-            ],
+            messages=[...],
             response_format={"type": "json_object"}
         )
         
-        # Επιστροφή του αποτελέσματος
-        return json.loads(response.choices[0].message.content)
+        # ΕΔΩ ΓΙΝΕΤΑΙ Η ΑΝΤΙΚΑΤΑΣΤΑΣΗ:
+        content = response.choices[0].message.content
+        data = json.loads(content)
+        
+        # Έλεγχος αν υπάρχουν τα βασικά κλειδιά για να μην κρασάρει η εφαρμογή
+        if "Τακτικές" not in data:
+            st.warning("⚠️ Το AI επέστρεψε λάθος δομή δεδομένων. Δοκιμάστε ξανά ή ελέγξτε την εικόνα.")
+            return {} # Επιστρέφουμε άδειο dict για να μην κρασάρει το app
+            
+        return data
         
     except Exception as e:
         st.error(f"❌ Σφάλμα AI: {e}")
