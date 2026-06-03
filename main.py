@@ -1,9 +1,10 @@
-import base64
-import json
 import streamlit as st
-from openai import OpenAI
 import pandas as pd
-from pydantic import BaseModel
+import os
+import json
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, Field
 
 # --- 1. ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ ---
 st.set_page_config(
@@ -15,15 +16,13 @@ st.set_page_config(
 # --- 2. ΟΡΙΣΜΟΣ ΑΡΧΕΙΩΝ ΔΕΔΟΜΕΝΩΝ ---
 PROJECTS_FILE = 'data_projects.csv'
 CHECKLIST_FILE = 'checklist_results.csv'
-
+EMPLOYEES_FILE = 'data_employees.csv'
 
 # Ορίστε τα αρχεία που θα χρησιμοποιείτε
 FINANCIALS_FILE = 'payroll_financials.csv'
 PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 
 # --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
-def get_employee_file(company_afm):
-    return f'employees_{company_afm}.csv'
 def load_data(filename, columns):
     try:
         df = pd.read_csv(filename)
@@ -46,7 +45,6 @@ class FinancialGroup(BaseModel):
     Σύνολο_Κόστος: float = 0.0
 
 class PayrollFinancials(BaseModel):
-    Περίοδος_Αρχείου: str  # Προσθήκη για έλεγχο
     Τακτικές: FinancialGroup
     Δώρο_Πάσχα: FinancialGroup
     Δώρο_Χριστουγέννων: FinancialGroup
@@ -54,53 +52,54 @@ class PayrollFinancials(BaseModel):
     Λοιπά: FinancialGroup
 
 def extract_financials_with_ai_stage3(uploaded_file, emp_name):
-    API_KEY = st.secrets.get("GROQ_API_KEY")
-    client = OpenAI(api_key=API_KEY, base_url="https://api.groq.com/openai/v1")
-    
-    # Μετατροπή σε base64
-    file_bytes = uploaded_file.getvalue()
-    base64_image = base64.b64encode(file_bytes).decode('utf-8')
-
-    # Το αναλυτικό prompt σου (αυτό που είχες στο Gemini)
-    system_prompt = f"""
-    Είσαι λογιστής. Ανάλυσε το έγγραφο μισθοδοσίας για τον υπάλληλο: "{emp_name}".
-    Επέστρεψε ΜΟΝΟ JSON με τη δομή: Τακτικές, Δώρο_Πάσχα, Δώρο_Χριστουγέννων, Επίδομα_Άδειας.
-    Αν δεν βρεις δεδομένα, βάλε 0.0. 
-    Αγνόησε συνολικά αθροίσματα, εστίασε μόνο στον {emp_name}.
-    Εξήγαγε οπωσδήποτε και το πεδίο "Περίοδος_Αρχείου" (π.χ. Μάιος 2026).
-    """
-
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Ανάλυσε το επισυναπτόμενο έγγραφο."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                    ]
-                }
-            ],
-            response_format={"type": "json_object"}
-        )
-        
-        # ΕΔΩ ΓΙΝΕΤΑΙ Η ΑΝΤΙΚΑΤΑΣΤΑΣΗ:
-        content = response.choices[0].message.content
-        data = json.loads(content)
-        
-        # Έλεγχος αν υπάρχουν τα βασικά κλειδιά για να μην κρασάρει η εφαρμογή
-        if "Τακτικές" not in data:
-            st.warning("⚠️ Το AI επέστρεψε λάθος δομή δεδομένων. Δοκιμάστε ξανά ή ελέγξτε την εικόνα.")
-            return {} # Επιστρέφουμε άδειο dict για να μην κρασάρει το app
-            
-        return data
-        
-    except Exception as e:
-        st.error(f"❌ Σφάλμα AI: {e}")
+    """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
+    API_KEY = st.secrets.get("GEMINI_API_KEY")
+    if not API_KEY:
+        st.error("🔑 Παρακαλώ ορίστε το Google Gemini API Key στα Secrets.")
         return {}
 
+    try:
+        client = genai.Client(api_key=API_KEY)
+        file_bytes = uploaded_file.read()
+        mime_type = uploaded_file.type
+        file_part = types.Part.from_bytes(
+            data=file_bytes,
+            mime_type=mime_type,
+        )
+
+        prompt = f"""
+        Είσαι λογιστής. Ανάλυσε το έγγραφο μισθοδοσίας για τον υπάλληλο: "{emp_name}".
+        Το έγγραφο μπορεί να έχει πολλαπλές σελίδες. 
+        - Τακτικές αποδοχές: Ψάξε σε όλες τις σελίδες για την κύρια γραμμή μισθοδοσίας.
+        - Δώρα (Πάσχα/Χριστουγέννων) & Επίδομα αδείας: Ψάξε για ξεχωριστές ενότητες ή σελίδες όπου αναφέρονται ρητά ως "Δώρο" ή "Επίδομα".
+
+        ΕΠΙΣΤΡΟΦΗ JSON (PayrollFinancials schema):
+        Αν δεν βρεις δεδομένα για μια κατηγορία (π.χ. Δώρο Πάσχα), βάλε 0.0 στα πεδία της. 
+        ΜΗΝ αθροίζεις τα δώρα στις τακτικές αποδοχές. Κράτα τα απόλυτα διαχωρισμένα.
+        Στόχος σου είναι να εξάγεις τα οικονομικά στοιχεία ΑΠΟΚΛΕΙΣΤΙΚΑ για τον υπάλληλο: "{emp_name}".
+
+        ΑΥΣΤΗΡΟΙ ΚΑΝΟΝΕΣ:
+        1. ΠΡΟΥΠΟΘΕΣΗ ΟΝΟΜΑΤΟΣ: Αν το όνομα "{emp_name}" ΔΕΝ αναγράφεται στο έγγραφο, επέστρεψε 0.0 σε όλα τα πεδία.
+        2. ΔΟΜΗ ΔΕΔΟΜΕΝΩΝ: Πρέπει να ομαδοποιήσεις τα ποσά ανά τύπο αποδοχών (Τακτικές, Δώρο_Πάσχα, Δώρο_Χριστουγέννων, Επίδομα_Άδειας, Λοιπά).
+        3. ΑΤΟΜΙΚΑ ΣΤΟΙΧΕΙΑ: Κάθε ομάδα (π.χ. Δώρο Πάσχα) πρέπει να περιέχει τα δικά της ΙΚΑ, ΦΜΥ και Καθαρές αποδοχές όπως αναγράφονται στο έγγραφο. 
+           Αν για κάποια ομάδα δεν υπάρχουν κρατήσεις, βάλε 0.0.
+        4. ΑΓΝΟΗΣΕ ΓΕΝΙΚΑ ΣΥΝΟΛΑ: Μην παίρνεις τα συνολικά αθροίσματα της επιχείρησης, μόνο τη γραμμή του "{emp_name}".
+        5. ΑΚΡΙΒΕΙΑ: Το 'Καθαρές' είναι το πληρωτέο ποσό. Αν ένα ποσό δεν υπάρχει, βάλε 0.0.
+        """
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[file_part, prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=PayrollFinancials,
+                temperature=0.0
+            ),
+        )
+        return json.loads(response.text)
+    except Exception as e:
+        st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
+        return {}
 def render_financial_fields(tab_prefix, group_data):
     # Μετατροπή σε dict αν είναι Pydantic model
     if hasattr(group_data, 'model_dump'):
@@ -116,12 +115,11 @@ def render_financial_fields(tab_prefix, group_data):
     for i, field in enumerate(fields):
         with cols[i % 2]:
             val = data.get(field, 0.0)
-            # Το κλειδί πρέπει να είναι μοναδικό για τον υπάλληλο και την περίοδο
             financials[field] = st.number_input(
                 field.replace("_", " "), 
                 value=float(val), 
                 format="%.2f", 
-                key=f"input_{tab_prefix}_{field}" # Πρόσθεσε το input_ για σιγουριά
+                key=f"{tab_prefix}_{field}"
             )
     return financials
     
@@ -146,37 +144,15 @@ def render_financial_fields(tab_prefix, group_data):
         "Επιδοτούμενο_ΟΠΣΚΕ": opsk
     }
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
-    if "current_fin_key" not in st.session_state or st.session_state["current_fin_key"] != fin_key:
-        st.session_state["ocr_data_active"] = {} # Καθαρισμός προσωρινών δεδομένων AI
-        st.session_state["financial_data"] = {}  # Καθαρισμός των inputs
-        st.session_state["current_fin_key"] = fin_key
-    
     st.subheader("📄 Αυτόματη Ανάγνωση Μισθοδοσίας")
     uploaded_file = st.file_uploader("Ανέβασε αρχείο (PDF/Image)", type=['pdf', 'png', 'jpg'], key=f"upload_{fin_key}")
     
     if uploaded_file and st.button("🚀 Ανάλυση με AI"):
-        st.write("Το κουμπί πατήθηκε και το αρχείο βρέθηκε!") # Debug message
         with st.spinner("Αναλύω..."):
             ocr_results = extract_financials_with_ai_stage3(uploaded_file, emp_data["Ονοματεπώνυμο"])
-        
             if ocr_results:
-                file_period = ocr_results.get("Περίοδος_Αρχείου", "")
-            
-                # ΕΛΕΓΧΟΣ
-                if file_period.strip() != period.strip():
-                    st.warning(f"⚠️ Προσοχή: Η περίοδος στο έγγραφο ({file_period}) διαφέρει από την περίοδο ελέγχου ({period}).")
-                
-                # Επιλογή διόρθωσης
-                use_file_period = st.checkbox("Χρήση περιόδου αρχείου αντί για του Sidebar;", value=False)
-                if use_file_period:
-                    # Ενημέρωση των δεδομένων
-                    st.session_state[f"ocr_data_{fin_key}"] = ocr_results
-                    st.success("✅ Δεδομένα αποδεκτά με την περίοδο του αρχείου.")
-                else:
-                    st.info("Διόρθωσε τα στοιχεία στο Sidebar ή άλλαξε το έγγραφο.")
-            else:
                 st.session_state[f"ocr_data_{fin_key}"] = ocr_results
-                st.success("✅ Δεδομένα εξήχθησαν και η περίοδος συμφωνεί!")
+                st.success("✅ Δεδομένα εξήχθησαν!")
                 st.rerun()
 
     # Tabs
@@ -201,10 +177,11 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     if st.button("💾 Αποθήκευση Όλων"):
         flat_data = {"ID_Κλειδί": fin_key}
         
-        # Εδώ πρέπει να τραβήξεις από το σωστό κλειδί που αποθήκευσε το OCR
-        current_data = st.session_state.get(f"ocr_data_{fin_key}", {})
+        # Έλεγχος αν το session_state έχει δεδομένα
+        financial_data = st.session_state.get("financial_data", {})
         
-        for group_name, group_dict in current_data.items():
+        for group_name, group_dict in financial_data.items():
+            # ΔΙΑΣΦΑΛΙΣΗ ότι το group_dict είναι λεξικό
             if isinstance(group_dict, dict):
                 for field, val in group_dict.items():
                     flat_data[f"{group_name}_{field}"] = val
@@ -345,8 +322,8 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
         st.sidebar.markdown("---")
         st.sidebar.subheader("👥 Διαχείριση & Επιλογή Υπαλλήλων")
         emp_cols = ["ID", "Ονοματεπώνυμο", "ΑΦΜ", "ΑΜΚΑ"]
-        emp_file = get_employee_file(selected_project_afm)
-        emp_df = load_data(emp_file, emp_cols)
+        emp_df = load_data(EMPLOYEES_FILE, emp_cols)
+
         if emp_df.empty or not all(col in emp_df.columns for col in emp_cols):
             emp_df = pd.DataFrame(columns=emp_cols)
         else:
@@ -371,7 +348,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                         else:
                             new_emp = pd.DataFrame([{"ID": generated_id, "Ονοματεπώνυμο": new_name, "ΑΦΜ": new_afm, "ΑΜΚΑ": new_amka}])
                             emp_df = pd.concat([emp_df, new_emp], ignore_index=True)
-                            save_to_csv(emp_df, emp_file)
+                            save_to_csv(emp_df, EMPLOYEES_FILE)
                             st.success("🎉 Ο υπάλληλος προστέθηκε!")
                             st.rerun()
                     else:
@@ -387,7 +364,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
 
                     if st.button("Οριστική Διαγραφή", type="primary", key="del_emp_btn"):
                         emp_df = emp_df[emp_df['ID'].astype(str) != str(target_del_id)]
-                        save_to_csv(emp_df, emp_file)
+                        save_to_csv(emp_df, EMPLOYEES_FILE)
                         st.success("Ο υπάλληλος διαγράφηκε!")
                         st.rerun()
 
