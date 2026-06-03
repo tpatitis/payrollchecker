@@ -127,21 +127,23 @@ def render_financial_fields(tab_prefix, group_data, fields_to_show=None):
     
     # Χρησιμοποιούμε το current_values που ήρθε από το OCR ή το CSV
     with cols[0]:
-        ika_erg = st.number_input("ΙΚΑ Εργαζόμενου", value=float(current_values.get("ΙΚΑ_Εργ", 0.0)), format="%.2f", key=f"{tab_prefix}_ika_erg")
-        ika_ergod = st.number_input("ΙΚΑ Εργοδότη", value=float(current_values.get("ΙΚΑ_Εργοδ", 0.0)), format="%.2f", key=f"{tab_prefix}_ika_ergod")
-        teka_erg = st.number_input("ΤΕΚΑ Εργαζόμενου", value=float(current_values.get("ΤΕΚΑ_Εργ", 0.0)), format="%.2f", key=f"{tab_prefix}_teka_erg")
+        ika_erg = st.number_input("ΙΚΑ Εργαζόμενου", value=float(current_values.get("ΙΚΑ_Εργαζομένου", 0.0)), format="%.2f", key=f"{tab_prefix}_ika_erg")
+        ika_ergod = st.number_input("ΙΚΑ Εργοδότη", value=float(current_values.get("ΙΚΑ_Εργοδότη", 0.0)), format="%.2f", key=f"{tab_prefix}_ika_ergod")
+        teka_erg = st.number_input("ΤΕΚΑ Εργαζόμενου", value=float(current_values.get("ΤΕΚΑ_Εργαζομένου", 0.0)), format="%.2f", key=f"{tab_prefix}_teka_erg")
+        teka_ergod = st.number_input("ΤΕΚΑ Εργοδότη", value=float(current_values.get("ΤΕΚΑ_Εργοδότη", 0.0)), format="%.2f", key=f"{tab_prefix}_teka_ergod")
     with cols[1]:
         fmy = st.number_input("ΦΜΥ", value=float(current_values.get("ΦΜΥ", 0.0)), format="%.2f", key=f"{tab_prefix}_fmy")
-        kathares = st.number_input("Καθαρές Αποδοχές", value=float(current_values.get("Καθαρές", 0.0)), format="%.2f", key=f"{tab_prefix}_kathares")
-        opsk = st.number_input("ΟΠΣΚΕ", value=float(current_values.get("ΟΠΣΚΕ", 0.0)), format="%.2f", key=f"{tab_prefix}_opsk")
+        kathares = st.number_input("Καθαρές Αποδοχές", value=float(current_values.get("Καθαρές_αποδοχές", 0.0)), format="%.2f", key=f"{tab_prefix}_kathares")
+        opsk = st.number_input("ΟΠΣΚΕ", value=float(current_values.get("Επιδοτούμενο_ΟΠΣΚΕ", 0.0)), format="%.2f", key=f"{tab_prefix}_opsk")
 
     return {
-        "ΙΚΑ_Εργ": ika_erg,
-        "ΙΚΑ_Εργοδ": ika_ergod,
-        "ΤΕΚΑ_Εργ": teka_erg,
+        "ΙΚΑ_Εργαζομένου": ika_erg,
+        "ΙΚΑ_Εργοδότη": ika_ergod,
+        "ΤΕΚΑ_Εργαζομένου": teka_erg,
+        "ΤΕΚΑ_Εργοδότη": teka_ergod,
         "ΦΜΥ": fmy,
-        "Καθαρές": kathares,
-        "ΟΠΣΚΕ": opsk
+        "Καθαρέ_αποδοχέςς": kathares,
+        "Επιδοτούμενο_ΟΠΣΚΕ": opsk
     }
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
     # --- ΠΡΟΣΘΗΚΗ OCR UPLOADER ---
@@ -158,7 +160,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
                     st.rerun() # Επανεκκίνηση για να εμφανιστούν οι τιμές στα πεδία
     
     # Φόρτωση δεδομένων
-    fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΤΕΚΑ_Εργοδ", "Σύνολο_Εισφ", "ΦΜΥ", "Καθαρές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
+    fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργαζομένου", "ΙΚΑ_Εργοδότη", "ΤΕΚΑ_Εργαζομένου", "ΤΕΚΑ_Εργοδότη", "Σύνολο_Εισφορών", "ΦΜΥ", "Καθαρές_αποδοχές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
     
     # Χρήση της global FINANCIALS_FILE που ορίστηκε στην αρχή του αρχείου
     fin_df = load_data(FINANCIALS_FILE, fin_cols)
@@ -206,13 +208,12 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # --- TAB 0: Τακτικές αποδοχές ---
     with tabs[0]:
-        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=float(get_val("Τακτικές_Αποδ")), format="%.2f", key=f"{fin_key}_tak_ap")
-        # ΠΡΟΣΟΧΗ: Εδώ πρέπει να περνάμε μόνο την ομάδα των τακτικών
-        tak_data = ocr_data.get("Τακτικές", {}) if isinstance(ocr_data, dict) else {}
-        financials = render_financial_fields(f"{fin_key}_tab0", tak_data, ["ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΦΜΥ", "Καθαρές"])
-        st.session_state["financial_data"]["Τακτικές"] = financials # Αποθήκευση ως group
-        st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
-    
+               
+        group_data = st.session_state.get("ocr_results", {}).get("Τακτικές_Αποδοχές", FinancialGroup())
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+        tak_data = render_financial_fields(f"{fin_key}_tak", group_data)
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
+        st.session_state["financial_data"]["Τακτικές"] = tak_data
     # --- TAB 1: Δώρο Πάσχα ---
     
     with tabs[1]:
