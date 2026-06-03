@@ -158,34 +158,20 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # Εμφάνιση default values για debugging
     st.write("Default Values loaded:", default_values)
 
-     # Χρησιμοποιούμε τις default τιμές στα inputs
-    v_tak_ap_value = st.number_input(
-        "Βασικός Μισθός (€)",
-        value=default_values.get("Τακτικές_Αποδ", 0.0),
-        format="%.2f",
-        key="tab0_main"
-    )
-
-    # Αποθήκευση της τελικής τιμής
+    
+    # Αρχικοποίηση του dictionary αν δεν υπάρχει
     st.session_state["financial_data"] = {
-        "ΙΚΑ_Εργ": 0.0,
-        "ΙΚΑ_Εργοδ": 0.0,
-        "ΤΕΚΑ_Εργ": 0.0,
-        "ΤΕΚΑ_Εργοδ": 0.0,
-        "Σύνολο_Εισφ": 0.0,
-        "ΦΜΥ": 0.0,
-        "Καθαρές": 0.0,
-        "ΟΠΣΚΕ": 0.0,
-        "Τακτικές_Αποδ": v_tak_ap_value,
-        "Δώρο_Πάσχα": 0.0,
-        "Δώρο_Χριστουγέννων": 0.0,
-        "Επίδομα_Άδειας": 0.0
+        "ΙΚΑ_Εργ": 0.0, "ΙΚΑ_Εργοδ": 0.0, "ΤΕΚΑ_Εργ": 0.0, "ΤΕΚΑ_Εργοδ": 0.0,
+        "Σύνολο_Εισφ": 0.0, "ΦΜΥ": 0.0, "Καθαρές": 0.0, "ΟΠΣΚΕ": 0.0,
+        "Τακτικές_Αποδ": default_values.get("Τακτικές_Αποδ", 0.0),
+        "Δώρο_Πάσχα": default_values.get("Δώρο_Πάσχα", 0.0),
+        "Δώρο_Χριστουγέννων": default_values.get("Δώρο_Χριστουγέννων", 0.0),
+        "Επίδομα_Άδειας": default_values.get("Επίδομα_Άδειας", 0.0)
     }
 
-    # 1. Πάρε τα δεδομένα από το OCR αν υπάρχουν, αλλιώς από το CSV ή 0.0
+    # 1. Πάρε τα δεδομένα από το OCR αν υπάρχουν...
     ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
     
-    # Φτιάξε ένα λεξικό με τις τιμές που θα εμφανιστούν
     def get_val(key_name):
         if key_name in ocr_data: return ocr_data[key_name]
         return default_values.get(key_name, 0.0)
