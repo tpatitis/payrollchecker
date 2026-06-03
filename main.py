@@ -50,7 +50,7 @@ class PayrollFinancials(BaseModel):
     Δώρο_Πάσχα: FinancialGroup
     Δώρο_Χριστουγέννων: FinancialGroup
     Επίδομα_Άδειας: FinancialGroup
-    Λοιπά: FinancialGroup
+     
 
 def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
