@@ -158,13 +158,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # Εμφάνιση default values για debugging
     st.write("Default Values loaded:", default_values)
 
-    # Χρησιμοποιούμε τις default τιμές στα inputs
-    v_tak_ap_value = st.number_input(
-        "Βασικός Μισθός (€)",
-        value=default_values.get("Τακτικές_Αποδ", 0.0),
-        format="%.2f",
-        key="tab0_main"
-    )
+    
 
     # Αποθήκευση της τελικής τιμής
     st.session_state["financial_data"] = {
