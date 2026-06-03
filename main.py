@@ -117,6 +117,8 @@ def render_financial_fields(tab_prefix, group_data):
     for i, field in enumerate(fields):
         with cols[i % 2]:
             val = data.get(field, 0.0)
+            # Δημιουργία απόλυτα μοναδικού κλειδιού
+            unique_key = f"num_{tab_prefix}_{field}"
             financials[field] = st.number_input(
                 field.replace("_", " "), 
                 value=float(val), 
@@ -167,9 +169,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     for i, tab in enumerate(tabs):
         with tab:
             category = tab_keys[i]
-            # ΠΡΟΤΕΡΑΙΟΤΗΤΑ: 1. OCR Data, 2. Default (0.0)
-            group_data = ocr_data.get(category, {})
-        
+                   
             # Εμφάνιση πεδίων
             render_financial_fields(f"{fin_key}_{category}", group_data)
     # Αρχικοποίηση session state
