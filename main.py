@@ -68,7 +68,14 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         )
 
         prompt = f"""
-        Είσαι έμπειρος Έλληνας λογιστής. Σου δίνεται ένα έγγραφο μισθοδοσίας.
+        Είσαι λογιστής. Ανάλυσε το έγγραφο μισθοδοσίας για τον υπάλληλο: "{emp_name}".
+        Το έγγραφο μπορεί να έχει πολλαπλές σελίδες. 
+        - Τακτικές αποδοχές: Ψάξε σε όλες τις σελίδες για την κύρια γραμμή μισθοδοσίας.
+        - Δώρα (Πάσχα/Χριστουγέννων) & Επίδομα αδείας: Ψάξε για ξεχωριστές ενότητες ή σελίδες όπου αναφέρονται ρητά ως "Δώρο" ή "Επίδομα".
+
+        ΕΠΙΣΤΡΟΦΗ JSON (PayrollFinancials schema):
+        Αν δεν βρεις δεδομένα για μια κατηγορία (π.χ. Δώρο Πάσχα), βάλε 0.0 στα πεδία της. 
+        ΜΗΝ αθροίζεις τα δώρα στις τακτικές αποδοχές. Κράτα τα απόλυτα διαχωρισμένα.
         Στόχος σου είναι να εξάγεις τα οικονομικά στοιχεία ΑΠΟΚΛΕΙΣΤΙΚΑ για τον υπάλληλο: "{emp_name}".
 
         ΑΥΣΤΗΡΟΙ ΚΑΝΟΝΕΣ:
@@ -146,14 +153,25 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         with st.spinner("Αναλύω..."):
             ocr_results = extract_financials_with_ai_stage3(uploaded_file, emp_data["Ονοματεπώνυμο"])
             if ocr_results:
+                st.json(ocr_results)
                 st.session_state[f"ocr_data_{fin_key}"] = ocr_results
                 st.success("✅ Δεδομένα εξήχθησαν!")
                 st.rerun()
 
-    # Tabs
-    tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
+    # Φόρτωση δεδομένων από το session state
+    ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
+
+    tabs = st.tabs(["Τακτικές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα Αδείας"])
     tab_keys = ["Τακτικές", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας"]
-    
+
+    for i, tab in enumerate(tabs):
+        with tab:
+            category = tab_keys[i]
+            # ΠΡΟΤΕΡΑΙΟΤΗΤΑ: 1. OCR Data, 2. Default (0.0)
+            group_data = ocr_data.get(category, {})
+        
+            # Εμφάνιση πεδίων
+            render_financial_fields(f"{fin_key}_{category}", group_data)
     # Αρχικοποίηση session state
     if "financial_data" not in st.session_state:
         st.session_state["financial_data"] = {}
