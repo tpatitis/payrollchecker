@@ -208,14 +208,14 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         st.session_state["financial_data"]["Δώρο_Πάσχα"] = v_doro_pasxa
         
     with tabs[2]:
-        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=get_val("Δώρο_Χριστουγέννων"), format="%.2f", key="tab1_pasxa")
-        financials = render_financial_fields("tab1", ocr_data if ocr_data else default_values)
+        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=get_val("Δώρο_Χριστουγέννων"), format="%.2f", key="tab2_xrist")
+        financials = render_financial_fields("tab2", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = v_doro_xrist
         
     with tabs[3]:
-        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=get_val("Επίδομα_Άδειας"), format="%.2f", key="tab1_pasxa")
-        financials = render_financial_fields("tab1", ocr_data if ocr_data else default_values)
+        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=get_val("Επίδομα_Άδειας"), format="%.2f", key="tab1=3_epid")
+        financials = render_financial_fields("tab3", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Επίδομα_Άδειας"] = v_epidoma_ad
         
