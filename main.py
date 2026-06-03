@@ -101,7 +101,7 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
 def render_financial_fields(tab_prefix, group_data):
-    """Εμφανίζει τα πεδία εισαγωγής βάσει του Pydantic model ή dict."""
+    # Μετατροπή σε dict αν είναι Pydantic model
     if hasattr(group_data, 'model_dump'):
         data = group_data.model_dump()
     else:
@@ -109,8 +109,6 @@ def render_financial_fields(tab_prefix, group_data):
 
     financials = {}
     cols = st.columns(2)
-    
-    # Λίστα πεδίων για εμφάνιση
     fields = ["ΙΚΑ_Εργαζομένου", "ΙΚΑ_Εργοδότη", "ΤΕΚΑ_Εργαζομένου", 
               "ΤΕΚΑ_Εργοδότη", "Σύνολο_Εισφορών", "ΦΜΥ", "Καθαρές_αποδοχές"]
     
@@ -177,11 +175,19 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
             st.session_state["financial_data"][group_key] = data
 
     if st.button("💾 Αποθήκευση Όλων"):
-        # Δημιουργία flat dictionary
         flat_data = {"ID_Κλειδί": fin_key}
-        for group_name, group_dict in st.session_state["financial_data"].items():
-            for field, val in group_dict.items():
-                flat_data[f"{group_name}_{field}"] = val
+        
+        # Έλεγχος αν το session_state έχει δεδομένα
+        financial_data = st.session_state.get("financial_data", {})
+        
+        for group_name, group_dict in financial_data.items():
+            # ΔΙΑΣΦΑΛΙΣΗ ότι το group_dict είναι λεξικό
+            if isinstance(group_dict, dict):
+                for field, val in group_dict.items():
+                    flat_data[f"{group_name}_{field}"] = val
+            else:
+                # Αν για κάποιο λόγο είναι None, προσπέρασέ το
+                continue
         
         # Φόρτωση και αποθήκευση
         fin_df = load_data(FINANCIALS_FILE, list(flat_data.keys()))
