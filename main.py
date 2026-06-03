@@ -120,11 +120,12 @@ def render_financial_fields(tab_prefix, group_data):
     for i, field in enumerate(fields):
         with cols[i % 2]:
             val = data.get(field, 0.0)
+            # Το κλειδί πρέπει να είναι μοναδικό για τον υπάλληλο και την περίοδο
             financials[field] = st.number_input(
                 field.replace("_", " "), 
                 value=float(val), 
                 format="%.2f", 
-                key=f"{tab_prefix}_{field}"
+                key=f"input_{tab_prefix}_{field}" # Πρόσθεσε το input_ για σιγουριά
             )
     return financials
     
@@ -149,6 +150,11 @@ def render_financial_fields(tab_prefix, group_data):
         "Επιδοτούμενο_ΟΠΣΚΕ": opsk
     }
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
+    if "current_fin_key" not in st.session_state or st.session_state["current_fin_key"] != fin_key:
+        st.session_state["ocr_data_active"] = {} # Καθαρισμός προσωρινών δεδομένων AI
+        st.session_state["financial_data"] = {}  # Καθαρισμός των inputs
+        st.session_state["current_fin_key"] = fin_key
+    
     st.subheader("📄 Αυτόματη Ανάγνωση Μισθοδοσίας")
     uploaded_file = st.file_uploader("Ανέβασε αρχείο (PDF/Image)", type=['pdf', 'png', 'jpg'], key=f"upload_{fin_key}")
     
@@ -198,11 +204,10 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     if st.button("💾 Αποθήκευση Όλων"):
         flat_data = {"ID_Κλειδί": fin_key}
         
-        # Έλεγχος αν το session_state έχει δεδομένα
-        financial_data = st.session_state.get("financial_data", {})
+        # Εδώ τραβάμε τα δεδομένα από το session state του συγκεκριμένου υπαλλήλου
+        current_data = st.session_state.get(f"data_{fin_key}", {})
         
-        for group_name, group_dict in financial_data.items():
-            # ΔΙΑΣΦΑΛΙΣΗ ότι το group_dict είναι λεξικό
+        for group_name, group_dict in current_data.items():
             if isinstance(group_dict, dict):
                 for field, val in group_dict.items():
                     flat_data[f"{group_name}_{field}"] = val
