@@ -94,14 +94,22 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
 def render_financial_fields(tab_prefix, group_data):
-    # group_data είναι ένα instance του FinancialGroup (π.χ. ocr_results.Τακτικές)
-    cols = st.columns(3)
-    data = group_data.dict() if hasattr(group_data, 'dict') else group_data
+    # Μετατροπή σε dict αν είναι Pydantic model
+    data = group_data.model_dump() if hasattr(group_data, 'model_dump') else group_data
     
+    cols = st.columns(3)
     financials = {}
-    for i, (key, value) in enumerate(data.items()):
+    
+    # Εμφάνιση όλων των πεδίων του group (ΙΚΑ, ΦΜΥ, Καθαρές κλπ)
+    for i, (field, value) in enumerate(data.items()):
         with cols[i % 3]:
-            financials[key] = st.number_input(key.replace("_", " "), value=float(value), key=f"{tab_prefix}_{key}")
+            # Το key είναι μοναδικό ανά tab και ανά πεδίο
+            financials[field] = st.number_input(
+                field.replace("_", " "), 
+                value=float(value), 
+                format="%.2f", 
+                key=f"{tab_prefix}_{field}"
+            )
     return financials
     
     # Χρησιμοποιούμε το current_values που ήρθε από το OCR ή το CSV
@@ -191,48 +199,57 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
                                             ["ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΦΜΥ", "Καθαρές"])
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
-
+    
     # --- TAB 1: Δώρο Πάσχα ---
     
     with tabs[1]:
-        # Αν υπάρχει OCR data, πάρε μόνο το κομμάτι του Δώρου
-        group_data = st.session_state["ocr_results"].Δώρο_Πάσχα if "ocr_results" in st.session_state else FinancialGroup()
-        # Εμφάνιση πεδίων μόνο για το Δώρο
-        tab_financials = render_financial_fields(f"{fin_key}_pasxa", group_data)
-        # Αποθήκευση στο σωστό σημείο
-        st.session_state["financial_data"]["Δώρο_Πάσχα"] = tab_financials
+        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Πάσχα", FinancialGroup())
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+        doro_pasxa_data = render_financial_fields(f"{fin_key}_pasxa", group_data)
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
+        st.session_state["financial_data"]["Δώρο_Πάσχα"] = doro_pasxa_data
+   
     # --- TAB 2: Δώρο Χριστουγέννων ---
-    
     with tabs[2]:
-        # Αν υπάρχει OCR data, πάρε μόνο το κομμάτι του Δώρου
-        group_data = st.session_state["ocr_results"].Δώρο_Χριστουγέννων if "ocr_results" in st.session_state else FinancialGroup()
-        
-        # Εμφάνιση πεδίων μόνο για το Δώρο
-        tab_financials = render_financial_fields(f"{fin_key}_xrist", group_data)
-        
-        # Αποθήκευση στο σωστό σημείο
-        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = tab_financials
+        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Χριστουγέννων", FinancialGroup())
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+        doro_xrist_data = render_financial_fields(f"{fin_key}_xrist", group_data)
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
+        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = doro_xrist_data
+       
     # --- TAB 3: Επίδομα αδείας ---
     with tabs[3]:
-        # Αν υπάρχει OCR data, πάρε μόνο το κομμάτι του Δώρου
-        group_data = st.session_state["ocr_results"].Επίδομα_Άδειας if "ocr_results" in st.session_state else FinancialGroup()
-        
-        # Εμφάνιση πεδίων μόνο για το Δώρο
-        tab_financials = render_financial_fields(f"{fin_key}_epidoma_ad", group_data)
-        
-        # Αποθήκευση στο σωστό σημείο
-        st.session_state["financial_data"]["Επίδομα_Άδειας"] = tab_financials
+        group_data = st.session_state.get("ocr_results", {}).get("Επίδομα_Άδειας", FinancialGroup())
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+        epidom_data = render_financial_fields(f"{fin_key}_epidom", group_data)
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
+        st.session_state["financial_data"]["Επίδομα_Άδειας"] = epidom_data
     
         
-    # Κουμπί αποθήκευσης
     if st.button("💾 Αποθήκευση Όλων"):
-        # ΑΦΑΙΡΕΣΕ ΤΟΝ ΕΠΑΝΑΟΡΙΣΜΟ ΤΩΝ ΣΥΝΑΡΤΗΣΕΩΝ ΕΔΩ
-        # Απλώς κάλεσε τις έτοιμες:
-        fin_df = load_data(FINANCIALS_FILE, list(st.session_state["financial_data"].keys()))
-        fin_row = pd.DataFrame([st.session_state["financial_data"]])
-        fin_df = pd.concat([fin_df, fin_row], ignore_index=True)
+        # Δημιουργία flat dictionary για το CSV
+        flat_data = {"ID_Κλειδί": fin_key}
+    
+        # Προσθήκη όλων των επιμέρους στοιχείων (π.χ. Δώρο_Πάσχα_ΙΚΑ_Εργ)
+        for group_name, group_dict in st.session_state["financial_data"].items():
+            if isinstance(group_dict, dict):
+                for field, val in group_dict.items():
+                    flat_data[f"{group_name}_{field}"] = val
+            else:
+                flat_data[group_name] = group_dict
+            
+        # 3. Φόρτωση, ενημέρωση και αποθήκευση στο CSV
+        fin_df = load_data(FINANCIALS_FILE, list(flat_row.keys()))
+        
+        # Αφαιρούμε παλιά εγγραφή για το ίδιο ID αν υπάρχει
+        fin_df = fin_df[fin_df['ID_Κλειδί'] != fin_key]
+        
+        # Προσθήκη νέας γραμμής
+        new_row = pd.DataFrame([flat_row])
+        fin_df = pd.concat([fin_df, new_row], ignore_index=True)
+        
         save_to_csv(fin_df, FINANCIALS_FILE)
-        st.success("✅ Τα στοιχεία αποθηκεύτηκαν!")
+        st.success("✅ Τα στοιχεία αποθηκεύτηκαν επιτυχώς στο CSV!")
     
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
