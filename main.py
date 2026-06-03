@@ -178,10 +178,13 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # Αν υπάρχει OCR data, το περνάμε ως default
     trigger_key = f"ocr_data_{fin_key}"
     if trigger_key in st.session_state:
+        st.write("DEBUG: Τι έλαβε το AI:")
+        st.json(st.session_state[trigger_key])
+        
+        # Ενημέρωσε το τοπικό ocr_data για να το χρησιμοποιήσεις στα tabs
         ocr_data = st.session_state[trigger_key]
-        for k in default_values:
-            if k in ocr_data:
-                default_values[k] = ocr_data[k]
+    else:
+        ocr_data = {}
 
     # Εμφάνιση default values για debugging
     st.write("Default Values loaded:", default_values)
