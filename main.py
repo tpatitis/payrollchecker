@@ -182,6 +182,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # --- TAB 0 ---
     with tabs[0]:
+        
         v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=float(get_val("Τακτικές_Αποδ")), format="%.2f", key=f"{fin_key}_tak_ap")
         financials = render_financial_fields(f"{fin_key}_tab0", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
@@ -190,21 +191,21 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # --- TAB 1 ---
     with tabs[1]:
         v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=float(get_val("Δώρο_Πάσχα")), format="%.2f", key=f"{fin_key}_doro_p")
-        financials = render_financial_fields(f"{fin_key}_tab1", ocr_data if ocr_data else default_values)
+        financials = render_financial_fields(f"{fin_key}_tab0", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Δώρο_Πάσχα"] = v_doro_pasxa
 
     # --- TAB 2 ---
     with tabs[2]:
         v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=float(get_val("Δώρο_Χριστουγέννων")), format="%.2f", key=f"{fin_key}_doro_x")
-        financials = render_financial_fields(f"{fin_key}_tab2", ocr_data if ocr_data else default_values)
+        financials = render_financial_fields(f"{fin_key}_tab0", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = v_doro_xrist
 
     # --- TAB 3 ---
     with tabs[3]:
         v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=float(get_val("Επίδομα_Άδειας")), format="%.2f", key=f"{fin_key}_epidoma_a")
-        financials = render_financial_fields(f"{fin_key}_tab3", ocr_data if ocr_data else default_values)
+        financials = render_financial_fields(f"{fin_key}_tab0", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Επίδομα_Άδειας"] = v_epidoma_ad
         
