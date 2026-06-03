@@ -35,13 +35,13 @@ def save_to_csv(df, filename):
 
 # --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (STRUCTURED OUTPUT SCHEMA) ---
 class FinancialGroup(BaseModel):
-    ΙΚΑ_Εργ: float = 0.0
-    ΙΚΑ_Εργοδ: float = 0.0
-    ΤΕΚΑ_Εργ: float = 0.0
-    ΤΕΚΑ_Εργοδ: float = 0.0
-    Σύνολο_Εισφ: float = 0.0
+    ΙΚΑ_Εργαζομένου: float = 0.0
+    ΙΚΑ_Εργοδότη: float = 0.0
+    ΤΕΚΑ_Εργαζομένου: float = 0.0
+    ΤΕΚΑ_Εργοδότη: float = 0.0
+    Σύνολο_Εισφορών: float = 0.0
     ΦΜΥ: float = 0.0
-    Καθαρές: float = 0.0
+    Καθαρές αποδοχές: float = 0.0
     Σύνολο_Κόστος: float = 0.0
 
 class PayrollFinancials(BaseModel):
@@ -207,12 +207,9 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # --- TAB 0: Τακτικές αποδοχές ---
     with tabs[0]:
         v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=float(get_val("Τακτικές_Αποδ")), format="%.2f", key=f"{fin_key}_tak_ap")
-        
         # ΠΡΟΣΟΧΗ: Εδώ πρέπει να περνάμε μόνο την ομάδα των τακτικών
         tak_data = ocr_data.get("Τακτικές", {}) if isinstance(ocr_data, dict) else {}
-        
         financials = render_financial_fields(f"{fin_key}_tab0", tak_data, ["ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΦΜΥ", "Καθαρές"])
-        
         st.session_state["financial_data"]["Τακτικές"] = financials # Αποθήκευση ως group
         st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
     
