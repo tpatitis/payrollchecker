@@ -350,7 +350,7 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
                         else:
                             new_emp = pd.DataFrame([{"ID": generated_id, "Ονοματεπώνυμο": new_name, "ΑΦΜ": new_afm, "ΑΜΚΑ": new_amka}])
                             emp_df = pd.concat([emp_df, new_emp], ignore_index=True)
-                            save_to_csv(emp_df, EMPLOYEES_FILE)
+                            save_to_csv(emp_df, emp_file)
                             st.success("🎉 Ο υπάλληλος προστέθηκε!")
                             st.rerun()
                     else:
