@@ -16,13 +16,15 @@ st.set_page_config(
 # --- 2. ΟΡΙΣΜΟΣ ΑΡΧΕΙΩΝ ΔΕΔΟΜΕΝΩΝ ---
 PROJECTS_FILE = 'data_projects.csv'
 CHECKLIST_FILE = 'checklist_results.csv'
-EMPLOYEES_FILE = 'data_employees.csv'
+
 
 # Ορίστε τα αρχεία που θα χρησιμοποιείτε
 FINANCIALS_FILE = 'payroll_financials.csv'
 PAYROLL_CHECKS_FILE = 'payroll_checks.csv'
 
 # --- 3. ΣΥΝΑΡΤΗΣΕΙΣ ΔΙΑΧΕΙΡΙΣΗΣ ΔΕΔΟΜΕΝΩΝ ---
+def get_employee_file(company_afm):
+    return f'employees_{company_afm}.csv'
 def load_data(filename, columns):
     try:
         df = pd.read_csv(filename)
@@ -322,8 +324,8 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
         st.sidebar.markdown("---")
         st.sidebar.subheader("👥 Διαχείριση & Επιλογή Υπαλλήλων")
         emp_cols = ["ID", "Ονοματεπώνυμο", "ΑΦΜ", "ΑΜΚΑ"]
-        emp_df = load_data(EMPLOYEES_FILE, emp_cols)
-
+        emp_file = get_employee_file(selected_project_afm)
+        emp_df = load_data(emp_file, emp_cols)
         if emp_df.empty or not all(col in emp_df.columns for col in emp_cols):
             emp_df = pd.DataFrame(columns=emp_cols)
         else:
