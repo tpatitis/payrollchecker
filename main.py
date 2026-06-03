@@ -93,28 +93,21 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     except Exception as e:
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
-def render_financial_fields(tab_prefix, group_data, fields_to_show=None):
-    """
-    Εμφανίζει τα πεδία εισαγωγής.
-    - tab_prefix: String για το μοναδικό key
-    - group_data: Dictionary ή Pydantic model με τις τιμές
-    - fields_to_show: Λίστα με τα πεδία που θέλουμε να εμφανίσουμε (προαιρετικό)
-    """
-    # 1. Μετατροπή σε dict αν είναι Pydantic model (όπως το FinancialGroup)
+def render_financial_fields(tab_prefix, group_data):
+    """Εμφανίζει τα πεδία εισαγωγής βάσει του Pydantic model ή dict."""
     if hasattr(group_data, 'model_dump'):
         data = group_data.model_dump()
     else:
         data = group_data if isinstance(group_data, dict) else {}
 
-    # 2. Αν δεν ορίσουμε πεδία, εμφάνισε όλα όσα περιέχει το group_data
-    if fields_to_show is None:
-        fields_to_show = list(data.keys())
-    
     financials = {}
     cols = st.columns(2)
     
-    # 3. Εμφάνιση των πεδίων
-    for i, field in enumerate(fields_to_show):
+    # Λίστα πεδίων για εμφάνιση
+    fields = ["ΙΚΑ_Εργαζομένου", "ΙΚΑ_Εργοδότη", "ΤΕΚΑ_Εργαζομένου", 
+              "ΤΕΚΑ_Εργοδότη", "Σύνολο_Εισφορών", "ΦΜΥ", "Καθαρές_αποδοχές"]
+    
+    for i, field in enumerate(fields):
         with cols[i % 2]:
             val = data.get(field, 0.0)
             financials[field] = st.number_input(
@@ -146,124 +139,50 @@ def render_financial_fields(tab_prefix, group_data, fields_to_show=None):
         "Επιδοτούμενο_ΟΠΣΚΕ": opsk
     }
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
-    # --- ΠΡΟΣΘΗΚΗ OCR UPLOADER ---
     st.subheader("📄 Αυτόματη Ανάγνωση Μισθοδοσίας")
-    uploaded_file = st.file_uploader("Ανέβασε αρχείο μισθοδοσίας (PDF/Image)", type=['pdf', 'png', 'jpg'], key=f"upload_{fin_key}")
+    uploaded_file = st.file_uploader("Ανέβασε αρχείο (PDF/Image)", type=['pdf', 'png', 'jpg'], key=f"upload_{fin_key}")
     
-    if uploaded_file is not None:
-        if st.button("🚀 Ανάλυση με AI"):
-            with st.spinner("Αναλύω το έγγραφο..."):
-                ocr_results = extract_financials_with_ai_stage3(uploaded_file, emp_data["Ονοματεπώνυμο"])
-                if ocr_results:
-                    st.session_state[f"ocr_data_{fin_key}"] = ocr_results
-                    st.success("✅ Τα δεδομένα εξήχθησαν επιτυχώς!")
-                    st.rerun() # Επανεκκίνηση για να εμφανιστούν οι τιμές στα πεδία
-    
-    # Φόρτωση δεδομένων
-    fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργαζομένου", "ΙΚΑ_Εργοδότη", "ΤΕΚΑ_Εργαζομένου", "ΤΕΚΑ_Εργοδότη", "Σύνολο_Εισφορών", "ΦΜΥ", "Καθαρές_αποδοχές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
-    
-    # Χρήση της global FINANCIALS_FILE που ορίστηκε στην αρχή του αρχείου
-    fin_df = load_data(FINANCIALS_FILE, fin_cols)
+    if uploaded_file and st.button("🚀 Ανάλυση με AI"):
+        with st.spinner("Αναλύω..."):
+            ocr_results = extract_financials_with_ai_stage3(uploaded_file, emp_data["Ονοματεπώνυμο"])
+            if ocr_results:
+                st.session_state[f"ocr_data_{fin_key}"] = ocr_results
+                st.success("✅ Δεδομένα εξήχθησαν!")
+                st.rerun()
 
-    # Διασφάλιση ότι όλες οι στήλες υπάρχουν
-    for col in fin_cols:
-        if col not in fin_df.columns:
-            fin_df[col] = 0.0
-
-    # Εύρεση τρέχοντων δεδομένων
-    ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
-    default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_cols if k != "ID_Κλειδί"}
-        
-    # Αν υπάρχει OCR data, το περνάμε ως default
-    trigger_key = f"ocr_data_{fin_key}"
-    if trigger_key in st.session_state:
-        ocr_data = st.session_state[trigger_key]
-        for k in default_values:
-            if k in ocr_data:
-                default_values[k] = ocr_data[k]
-
-    # Εμφάνιση default values για debugging
-    st.write("Default Values loaded:", default_values)
-
-    
-    # Αρχικοποίηση του dictionary αν δεν υπάρχει
-    st.session_state["financial_data"] = {
-        "ΙΚΑ_Εργ": 0.0, "ΙΚΑ_Εργοδ": 0.0, "ΤΕΚΑ_Εργ": 0.0, "ΤΕΚΑ_Εργοδ": 0.0,
-        "Σύνολο_Εισφ": 0.0, "ΦΜΥ": 0.0, "Καθαρές": 0.0, "ΟΠΣΚΕ": 0.0,
-        "Τακτικές_Αποδ": default_values.get("Τακτικές_Αποδ", 0.0),
-        "Δώρο_Πάσχα": default_values.get("Δώρο_Πάσχα", 0.0),
-        "Δώρο_Χριστουγέννων": default_values.get("Δώρο_Χριστουγέννων", 0.0),
-        "Επίδομα_Άδειας": default_values.get("Επίδομα_Άδειας", 0.0)
-    }
-
-    # 1. Πάρε τα δεδομένα από το OCR αν υπάρχουν...
-    ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
-    
-    def get_val(key_name):
-        if key_name in ocr_data: return ocr_data[key_name]
-        return default_values.get(key_name, 0.0)
-
-    # 2. Tabs με σωστή ανάθεση τιμών
+    # Tabs
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
+    tab_keys = ["Τακτικές", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας"]
+    
+    # Αρχικοποίηση session state
+    if "financial_data" not in st.session_state:
+        st.session_state["financial_data"] = {}
 
-    # --- TAB 0: Τακτικές αποδοχές ---
-    with tabs[0]:
-               
-        group_data = st.session_state.get("ocr_results", {}).get("Τακτικές_Αποδοχές", FinancialGroup())
-        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
-        tak_data = render_financial_fields(f"{fin_key}_tak", group_data)
-        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
-        st.session_state["financial_data"]["Τακτικές"] = tak_data
-    # --- TAB 1: Δώρο Πάσχα ---
-    
-    with tabs[1]:
-        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Πάσχα", FinancialGroup())
-        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
-        doro_pasxa_data = render_financial_fields(f"{fin_key}_pasxa", group_data)
-        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
-        st.session_state["financial_data"]["Δώρο_Πάσχα"] = doro_pasxa_data
-   
-    # --- TAB 2: Δώρο Χριστουγέννων ---
-    with tabs[2]:
-        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Χριστουγέννων", FinancialGroup())
-        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
-        doro_xrist_data = render_financial_fields(f"{fin_key}_xrist", group_data)
-        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
-        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = doro_xrist_data
-       
-    # --- TAB 3: Επίδομα αδείας ---
-    with tabs[3]:
-        group_data = st.session_state.get("ocr_results", {}).get("Επίδομα_Άδειας", FinancialGroup())
-        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
-        epidom_data = render_financial_fields(f"{fin_key}_epidom", group_data)
-        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
-        st.session_state["financial_data"]["Επίδομα_Άδειας"] = epidom_data
-    
-        
-    if st.button("💾 Αποθήκευση Όλων"):
-        # Δημιουργία flat dictionary για το CSV
-        flat_data = {"ID_Κλειδί": fin_key}
-    
-        # Προσθήκη όλων των επιμέρους στοιχείων (π.χ. Δώρο_Πάσχα_ΙΚΑ_Εργ)
-        for group_name, group_dict in st.session_state["financial_data"].items():
-            if isinstance(group_dict, dict):
-                for field, val in group_dict.items():
-                    flat_data[f"{group_name}_{field}"] = val
-            else:
-                flat_data[group_name] = group_dict
+    for i, tab in enumerate(tabs):
+        with tab:
+            group_key = tab_keys[i]
+            # Λήψη δεδομένων από OCR ή default
+            ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
+            group_data = ocr_data.get(group_key, FinancialGroup())
             
-        # 3. Φόρτωση, ενημέρωση και αποθήκευση στο CSV
-        fin_df = load_data(FINANCIALS_FILE, list(flat_row.keys()))
+            # Render
+            data = render_financial_fields(f"{fin_key}_{group_key}", group_data)
+            st.session_state["financial_data"][group_key] = data
+
+    if st.button("💾 Αποθήκευση Όλων"):
+        # Δημιουργία flat dictionary
+        flat_data = {"ID_Κλειδί": fin_key}
+        for group_name, group_dict in st.session_state["financial_data"].items():
+            for field, val in group_dict.items():
+                flat_data[f"{group_name}_{field}"] = val
         
-        # Αφαιρούμε παλιά εγγραφή για το ίδιο ID αν υπάρχει
-        fin_df = fin_df[fin_df['ID_Κλειδί'] != fin_key]
-        
-        # Προσθήκη νέας γραμμής
-        new_row = pd.DataFrame([flat_row])
+        # Φόρτωση και αποθήκευση
+        fin_df = load_data(FINANCIALS_FILE, list(flat_data.keys()))
+        fin_df = fin_df[fin_df['ID_Κλειδί'] != fin_key] # Αφαίρεση παλιάς εγγραφής
+        new_row = pd.DataFrame([flat_data])
         fin_df = pd.concat([fin_df, new_row], ignore_index=True)
-        
         save_to_csv(fin_df, FINANCIALS_FILE)
-        st.success("✅ Τα στοιχεία αποθηκεύτηκαν επιτυχώς στο CSV!")
+        st.success("✅ Αποθηκεύτηκε!")
     
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
