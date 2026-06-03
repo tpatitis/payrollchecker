@@ -195,9 +195,13 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # Για κάθε tab, φορτώνουμε τα τρέχοντα values και τα εμφανίζουμε
     with tabs[0]:
-        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=get_val("Τακτικές_Αποδ"), format="%.2f", key="tab0_tak")
-        # Πέρασε το ocr_data στη συνάρτηση για να ξέρει τι να δείξει
-        financials = render_financial_fields("tab0", ocr_data if ocr_data else default_values)
+        v_tak_ap = st.number_input(
+            "Βασικός Μισθός (€)", 
+            value=float(get_val("Τακτικές_Αποδ")), 
+            format="%.2f", 
+            key=f"{fin_key}_tak_ap" # Δυναμικό key που αλλάζει μαζί με τον υπάλληλο/μήνα
+        )
+        financials = render_financial_fields(f"{fin_key}_tab0", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
         
