@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import os
 import json
+import base64
+from openai import OpenAI
+import streamlit as st
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
@@ -55,59 +58,45 @@ class PayrollFinancials(BaseModel):
     Λοιπά: FinancialGroup
 
 def extract_financials_with_ai_stage3(uploaded_file, emp_name):
-    """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
-    API_KEY = st.secrets.get("GEMINI_API_KEY")
-    if not API_KEY:
-        st.error("🔑 Παρακαλώ ορίστε το Google Gemini API Key στα Secrets.")
-        return {}
+    API_KEY = st.secrets.get("GROQ_API_KEY")
+    client = OpenAI(api_key=API_KEY, base_url="https://api.groq.com/openai/v1")
+    
+    # Μετατροπή σε base64
+    file_bytes = uploaded_file.getvalue()
+    base64_image = base64.b64encode(file_bytes).decode('utf-8')
+
+    # Το αναλυτικό prompt σου (αυτό που είχες στο Gemini)
+    system_prompt = f"""
+    Είσαι λογιστής. Ανάλυσε το έγγραφο μισθοδοσίας για τον υπάλληλο: "{emp_name}".
+    Επέστρεψε ΜΟΝΟ JSON με τη δομή: Τακτικές, Δώρο_Πάσχα, Δώρο_Χριστουγέννων, Επίδομα_Άδειας.
+    Αν δεν βρεις δεδομένα, βάλε 0.0. 
+    Αγνόησε συνολικά αθροίσματα, εστίασε μόνο στον {emp_name}.
+    Εξήγαγε οπωσδήποτε και το πεδίο "Περίοδος_Αρχείου" (π.χ. Μάιος 2026).
+    """
 
     try:
-        client = genai.Client(api_key=API_KEY)
-        file_bytes = uploaded_file.read()
-        mime_type = uploaded_file.type
-        file_part = types.Part.from_bytes(
-            data=file_bytes,
-            mime_type=mime_type,
+        response = client.chat.completions.create(
+            model="llama-3.2-90b-vision-preview",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Ανάλυσε το επισυναπτόμενο έγγραφο."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                    ]
+                }
+            ],
+            response_format={"type": "json_object"}
         )
-
-        prompt = f"""
-        Είσαι λογιστής. Ανάλυσε το έγγραφο μισθοδοσίας για τον υπάλληλο: "{emp_name}".
-        Το έγγραφο μπορεί να έχει πολλαπλές σελίδες. 
-        - Τακτικές αποδοχές: Ψάξε σε όλες τις σελίδες για την κύρια γραμμή μισθοδοσίας.
-        - Δώρα (Πάσχα/Χριστουγέννων) & Επίδομα αδείας: Ψάξε για ξεχωριστές ενότητες ή σελίδες όπου αναφέρονται ρητά ως "Δώρο" ή "Επίδομα".
-
-        ΕΠΙΣΤΡΟΦΗ JSON (PayrollFinancials schema):
-        Αν δεν βρεις δεδομένα για μια κατηγορία (π.χ. Δώρο Πάσχα), βάλε 0.0 στα πεδία της. 
-        ΜΗΝ αθροίζεις τα δώρα στις τακτικές αποδοχές. Κράτα τα απόλυτα διαχωρισμένα.
-        Στόχος σου είναι να εξάγεις τα οικονομικά στοιχεία ΑΠΟΚΛΕΙΣΤΙΚΑ για τον υπάλληλο: "{emp_name}".
-        ΕΠΙΣΤΡΟΦΗ JSON (PayrollFinancials schema):
-        - Περίοδος_Αρχείου: Εξήγαγε τον μήνα και το έτος που αναγράφεται στο έγγραφο (π.χ. "Μάιος 2026").
         
-        ΑΥΣΤΗΡΟΙ ΚΑΝΟΝΕΣ:
-        1. ΠΡΟΥΠΟΘΕΣΗ ΟΝΟΜΑΤΟΣ: Αν το όνομα "{emp_name}" ΔΕΝ αναγράφεται στο έγγραφο, επέστρεψε 0.0 σε όλα τα πεδία.
-        2. ΔΟΜΗ ΔΕΔΟΜΕΝΩΝ: Πρέπει να ομαδοποιήσεις τα ποσά ανά τύπο αποδοχών (Τακτικές, Δώρο_Πάσχα, Δώρο_Χριστουγέννων, Επίδομα_Άδειας, Λοιπά).
-        3. ΑΤΟΜΙΚΑ ΣΤΟΙΧΕΙΑ: Κάθε ομάδα (π.χ. Δώρο Πάσχα) πρέπει να περιέχει τα δικά της ΙΚΑ, ΦΜΥ και Καθαρές αποδοχές όπως αναγράφονται στο έγγραφο. 
-           Αν για κάποια ομάδα δεν υπάρχουν κρατήσεις, βάλε 0.0.
-        4. ΑΓΝΟΗΣΕ ΓΕΝΙΚΑ ΣΥΝΟΛΑ: Μην παίρνεις τα συνολικά αθροίσματα της επιχείρησης, μόνο τη γραμμή του "{emp_name}".
-        5. ΑΚΡΙΒΕΙΑ: Το 'Καθαρές' είναι το πληρωτέο ποσό. Αν ένα ποσό δεν υπάρχει, βάλε 0.0.
-        """
-
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[file_part, prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=PayrollFinancials,
-                temperature=0.0
-            ),
-        )
-        return json.loads(response.text)
+        # Επιστροφή του αποτελέσματος
+        return json.loads(response.choices[0].message.content)
+        
     except Exception as e:
-        # Χρησιμοποιούμε st.error με icon για να είναι μόνιμο
         st.error(f"❌ Σφάλμα AI: {e}")
-        # Καταγραφή στο terminal του Streamlit για μελλοντική ανάλυση
-        st.write(e) 
         return {}
+
 def render_financial_fields(tab_prefix, group_data):
     # Μετατροπή σε dict αν είναι Pydantic model
     if hasattr(group_data, 'model_dump'):
