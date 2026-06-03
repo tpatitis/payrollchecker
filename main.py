@@ -103,7 +103,10 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         )
         return json.loads(response.text)
     except Exception as e:
-        st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
+        # Χρησιμοποιούμε st.error με icon για να είναι μόνιμο
+        st.error(f"❌ Σφάλμα AI: {e}")
+        # Καταγραφή στο terminal του Streamlit για μελλοντική ανάλυση
+        st.write(e) 
         return {}
 def render_financial_fields(tab_prefix, group_data):
     # Μετατροπή σε dict αν είναι Pydantic model
