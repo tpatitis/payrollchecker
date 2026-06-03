@@ -35,8 +35,7 @@ def save_to_csv(df, filename):
 
 # --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (STRUCTURED OUTPUT SCHEMA) ---
 class FinancialGroup(BaseModel):
-    Τακτικές_Αποδοχές: float = 0.0 # Πρόσθεσέ το εδώ
-    ΙΚΑ_Εργαζομένου: float = 0.0
+    Τακτικές_Αποδοχές: float = 0.0 # Προσθήκη για να υπάρχει στο tab 0
     ΙΚΑ_Εργαζομένου: float = 0.0
     ΙΚΑ_Εργοδότη: float = 0.0
     ΤΕΚΑ_Εργαζομένου: float = 0.0
