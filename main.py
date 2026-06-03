@@ -98,17 +98,18 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
 def render_financial_fields(tab_prefix, current_values):
     """
     Εμφανίζει τα πεδία εισαγωγής για τα οικονομικά στοιχεία.
-    Επιστρέφει ένα dictionary με τις τιμές που εισήγαγε ο χρήστης.
     """
     cols = st.columns(2)
+    
+    # Χρησιμοποιούμε το current_values που ήρθε από το OCR ή το CSV
     with cols[0]:
-        ika_erg = st.number_input("ΙΚΑ Εργαζόμενου", value=current_values.get("ΙΚΑ_Εργ", 0.0), format="%.2f", key=f"{tab_prefix}_ika_erg")
-        ika_ergod = st.number_input("ΙΚΑ Εργοδότη", value=current_values.get("ΙΚΑ_Εργοδ", 0.0), format="%.2f", key=f"{tab_prefix}_ika_ergod")
-        teka_erg = st.number_input("ΤΕΚΑ Εργαζόμενου", value=current_values.get("ΤΕΚΑ_Εργ", 0.0), format="%.2f", key=f"{tab_prefix}_teka_erg")
+        ika_erg = st.number_input("ΙΚΑ Εργαζόμενου", value=float(current_values.get("ΙΚΑ_Εργ", 0.0)), format="%.2f", key=f"{tab_prefix}_ika_erg")
+        ika_ergod = st.number_input("ΙΚΑ Εργοδότη", value=float(current_values.get("ΙΚΑ_Εργοδ", 0.0)), format="%.2f", key=f"{tab_prefix}_ika_ergod")
+        teka_erg = st.number_input("ΤΕΚΑ Εργαζόμενου", value=float(current_values.get("ΤΕΚΑ_Εργ", 0.0)), format="%.2f", key=f"{tab_prefix}_teka_erg")
     with cols[1]:
-        fmy = st.number_input("ΦΜΥ", value=current_values.get("ΦΜΥ", 0.0), format="%.2f", key=f"{tab_prefix}_fmy")
-        kathares = st.number_input("Καθαρές Αποδοχές", value=current_values.get("Καθαρές", 0.0), format="%.2f", key=f"{tab_prefix}_kathares")
-        opsk = st.number_input("ΟΠΣΚΕ", value=current_values.get("ΟΠΣΚΕ", 0.0), format="%.2f", key=f"{tab_prefix}_opsk")
+        fmy = st.number_input("ΦΜΥ", value=float(current_values.get("ΦΜΥ", 0.0)), format="%.2f", key=f"{tab_prefix}_fmy")
+        kathares = st.number_input("Καθαρές Αποδοχές", value=float(current_values.get("Καθαρές", 0.0)), format="%.2f", key=f"{tab_prefix}_kathares")
+        opsk = st.number_input("ΟΠΣΚΕ", value=float(current_values.get("ΟΠΣΚΕ", 0.0)), format="%.2f", key=f"{tab_prefix}_opsk")
 
     return {
         "ΙΚΑ_Εργ": ika_erg,
