@@ -95,11 +95,31 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     except Exception as e:
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
-def render_financial_fields(tab_prefix, current_values):
+def render_financial_fields(tab_prefix, current_values, fields_to_show=None):
     """
-    Εμφανίζει τα πεδία εισαγωγής για τα οικονομικά στοιχεία.
+    Εμφανίζει ΜΟΝΟ τα πεδία που ορίζουμε στη λίστα fields_to_show.
     """
+    # 1. Αρχικοποίηση του λεξικού εδώ
+    financials = {}
+    
+    if fields_to_show is None:
+        fields_to_show = ["ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΦΜΥ", "Καθαρές", "ΟΠΣΚΕ"]
+    
+    # 2. Δημιουργία στηλών για το UI
     cols = st.columns(2)
+    
+    # 3. Εμφάνιση των πεδίων δυναμικά
+    for i, field in enumerate(fields_to_show):
+        with cols[i % 2]:
+            financials[field] = st.number_input(
+                field.replace("_", " "), 
+                value=float(current_values.get(field, 0.0)), 
+                format="%.2f", 
+                key=f"{tab_prefix}_{field}"
+            )
+            
+    # 4. Επιστροφή των τιμών ώστε να ενημερωθεί το session_state
+    return financials
     
     # Χρησιμοποιούμε το current_values που ήρθε από το OCR ή το CSV
     with cols[0]:
@@ -180,33 +200,29 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # 2. Tabs με σωστή ανάθεση τιμών
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
-    # --- TAB 0 ---
+    # --- TAB 0: Τακτικές αποδοχές ---
     with tabs[0]:
-        
         v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=float(get_val("Τακτικές_Αποδ")), format="%.2f", key=f"{fin_key}_tak_ap")
-        financials = render_financial_fields(f"{fin_key}_tab0", ocr_data if ocr_data else default_values)
+        # Εμφάνιση μόνο των κρατήσεων και φόρων στο 1ο tab
+        financials = render_financial_fields(f"{fin_key}_tab0", ocr_data if ocr_data else default_values, 
+                                            ["ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΦΜΥ", "Καθαρές"])
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
 
-    # --- TAB 1 ---
+    # --- TAB 1: Δώρο Πάσχα ---
     with tabs[1]:
         v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=float(get_val("Δώρο_Πάσχα")), format="%.2f", key=f"{fin_key}_doro_p")
-        financials = render_financial_fields(f"{fin_key}_tab1", ocr_data if ocr_data else default_values)
-        st.session_state["financial_data"].update(financials)
+        # Εδώ μπορείς να δείξεις μόνο τα απαραίτητα πεδία ή τίποτα άλλο
         st.session_state["financial_data"]["Δώρο_Πάσχα"] = v_doro_pasxa
 
-    # --- TAB 2 ---
+    # --- TAB 2: Δώρο Χριστουγέννων ---
     with tabs[2]:
         v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=float(get_val("Δώρο_Χριστουγέννων")), format="%.2f", key=f"{fin_key}_doro_x")
-        financials = render_financial_fields(f"{fin_key}_tab2", ocr_data if ocr_data else default_values)
-        st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = v_doro_xrist
 
-    # --- TAB 3 ---
+    # --- TAB 3: Επίδομα αδείας ---
     with tabs[3]:
         v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=float(get_val("Επίδομα_Άδειας")), format="%.2f", key=f"{fin_key}_epidoma_a")
-        financials = render_financial_fields(f"{fin_key}_tab3", ocr_data if ocr_data else default_values)
-        st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Επίδομα_Άδειας"] = v_epidoma_ad
         
     # Κουμπί αποθήκευσης
