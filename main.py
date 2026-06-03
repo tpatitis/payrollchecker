@@ -93,20 +93,33 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     except Exception as e:
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
-def render_financial_fields(tab_prefix, group_data):
-    # Μετατροπή σε dict αν είναι Pydantic model
-    data = group_data.model_dump() if hasattr(group_data, 'model_dump') else group_data
+def render_financial_fields(tab_prefix, group_data, fields_to_show=None):
+    """
+    Εμφανίζει τα πεδία εισαγωγής.
+    - tab_prefix: String για το μοναδικό key
+    - group_data: Dictionary ή Pydantic model με τις τιμές
+    - fields_to_show: Λίστα με τα πεδία που θέλουμε να εμφανίσουμε (προαιρετικό)
+    """
+    # 1. Μετατροπή σε dict αν είναι Pydantic model (όπως το FinancialGroup)
+    if hasattr(group_data, 'model_dump'):
+        data = group_data.model_dump()
+    else:
+        data = group_data if isinstance(group_data, dict) else {}
+
+    # 2. Αν δεν ορίσουμε πεδία, εμφάνισε όλα όσα περιέχει το group_data
+    if fields_to_show is None:
+        fields_to_show = list(data.keys())
     
-    cols = st.columns(3)
     financials = {}
+    cols = st.columns(2)
     
-    # Εμφάνιση όλων των πεδίων του group (ΙΚΑ, ΦΜΥ, Καθαρές κλπ)
-    for i, (field, value) in enumerate(data.items()):
-        with cols[i % 3]:
-            # Το key είναι μοναδικό ανά tab και ανά πεδίο
+    # 3. Εμφάνιση των πεδίων
+    for i, field in enumerate(fields_to_show):
+        with cols[i % 2]:
+            val = data.get(field, 0.0)
             financials[field] = st.number_input(
                 field.replace("_", " "), 
-                value=float(value), 
+                value=float(val), 
                 format="%.2f", 
                 key=f"{tab_prefix}_{field}"
             )
@@ -194,10 +207,13 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # --- TAB 0: Τακτικές αποδοχές ---
     with tabs[0]:
         v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=float(get_val("Τακτικές_Αποδ")), format="%.2f", key=f"{fin_key}_tak_ap")
-        # Εμφάνιση μόνο των κρατήσεων και φόρων στο 1ο tab
-        financials = render_financial_fields(f"{fin_key}_tab0", ocr_data if ocr_data else default_values, 
-                                            ["ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΦΜΥ", "Καθαρές"])
-        st.session_state["financial_data"].update(financials)
+        
+        # ΠΡΟΣΟΧΗ: Εδώ πρέπει να περνάμε μόνο την ομάδα των τακτικών
+        tak_data = ocr_data.get("Τακτικές", {}) if isinstance(ocr_data, dict) else {}
+        
+        financials = render_financial_fields(f"{fin_key}_tab0", tak_data, ["ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΦΜΥ", "Καθαρές"])
+        
+        st.session_state["financial_data"]["Τακτικές"] = financials # Αποθήκευση ως group
         st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
     
     # --- TAB 1: Δώρο Πάσχα ---
