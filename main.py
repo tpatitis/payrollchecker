@@ -50,7 +50,7 @@ class PayrollFinancials(BaseModel):
     Δώρο_Πάσχα: FinancialGroup
     Δώρο_Χριστουγέννων: FinancialGroup
     Επίδομα_Άδειας: FinancialGroup
-     
+    Λοιπά: FinancialGroup 
 
 def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
@@ -161,28 +161,26 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
                     st.rerun() # Επανεκκίνηση για να εμφανιστούν οι τιμές στα πεδία
     
     # Φόρτωση δεδομένων
-    # Φόρτωση δεδομένων
     fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργαζομένου", "ΙΚΑ_Εργοδότη", "ΤΕΚΑ_Εργαζομένου", "ΤΕΚΑ_Εργοδότη", 
                 "Σύνολο_Εισφορών", "ΦΜΥ", "Καθαρές_αποδοχές", "Τακτικές_Αποδ", "Υπερωρίες", 
                 "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
     
-    fin_df = load_data(FINANCIALS_FILE, fin_cols)
-
-    # --- ΕΔΩ ΕΙΝΑΙ Η ΔΙΟΡΘΩΣΗ ---
-    # Αν το DataFrame είναι άδειο, βεβαιώσου ότι έχει τις στήλες
-    if fin_df.empty:
+    # Ασφαλής φόρτωση
+    if os.path.exists(FINANCIALS_FILE):
+        try:
+            fin_df = pd.read_csv(FINANCIALS_FILE)
+        except:
+            fin_df = pd.DataFrame(columns=fin_cols)
+    else:
         fin_df = pd.DataFrame(columns=fin_cols)
-    
-    # Επιπλέον έλεγχος: Αν λείπει η στήλη από ένα υπάρχον αρχείο, πρόσθεσέ την
-    if 'ID_Κλειδί' not in fin_df.columns:
-        fin_df['ID_Κλειδί'] = "" 
-    # ----------------------------
 
-    # Διασφάλιση ότι όλες οι στήλες υπάρχουν
+    # Διασφάλιση στηλών (αν το αρχείο υπήρχε αλλά ήταν ελλιπές)
     for col in fin_cols:
         if col not in fin_df.columns:
             fin_df[col] = 0.0
-
+            
+    # Τώρα το ID_Κλειδί υπάρχει εγγυημένα
+    fin_df['ID_Κλειδί'] = fin_df['ID_Κλειδί'].astype(str)
     # Εύρεση τρέχοντων δεδομένων
     ext_fin = fin_df[fin_df['ID_Κλειδί'] == fin_key]
     default_values = {k: (float(ext_fin[k].iloc[0]) if not ext_fin.empty and k in ext_fin.columns else 0.0) for k in fin_cols if k != "ID_Κλειδί"}
