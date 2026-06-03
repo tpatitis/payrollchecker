@@ -34,22 +34,22 @@ def save_to_csv(df, filename):
     df.to_csv(filename, index=False)
 
 # --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (STRUCTURED OUTPUT SCHEMA) ---
+class FinancialGroup(BaseModel):
+    ΙΚΑ_Εργ: float = 0.0
+    ΙΚΑ_Εργοδ: float = 0.0
+    ΤΕΚΑ_Εργ: float = 0.0
+    ΤΕΚΑ_Εργοδ: float = 0.0
+    Σύνολο_Εισφ: float = 0.0
+    ΦΜΥ: float = 0.0
+    Καθαρές: float = 0.0
+    Σύνολο_Κόστος: float = 0.0
+
 class PayrollFinancials(BaseModel):
-    ΙΚΑ_Εργ: float = Field(description="Οι κρατήσεις ή εισφορές του ασφαλισμένου/εργαζομένου για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ). Μην το μπερδεύεις με τις εργοδοτικές.")
-    ΙΚΑ_Εργοδ: float = Field(description="Οι εισφορές του εργοδότη για το κύριο ταμείο (ΙΚΑ/ΕΦΚΑ).")
-    ΤΕΚΑ_Εργ: float = Field(description="Οι κρατήσεις του εργαζομένου για το ΤΕΚΑ (επικουρικό). Αν δεν υπάρχει, βάλε 0.0.")
-    ΤΕΚΑ_Εργοδ: float = Field(description="Οι εισφορές του εργοδότη για το ΤΕΚΑ. Αν δεν υπάρχει, βάλε 0.0.")
-    Σύνολο_Εισφ: float = Field(description="Το άθροισμα όλων των ασφαλιστικών κρατήσεων/εισφορών εργαζομένου και εργοδότη.")
-    ΦΜΥ: float = Field(description="Ο Φόρος Μισθωτών Υπηρεσιών (Φ.Μ.Υ.). Αν δεν υπάρχει, βάλε 0.0.")
-    Καθαρές: float = Field(description="Το τελικό πληρωτέο ποσό στον εργαζόμενο (Καθαρές Αποδοχές).")
-    Τακτικές_Αποδ: float = Field(description="Οι μικτές τακτικές αποδοχές / βασικός μισθός.")
-    Υπερωρίες: float = Field(description="Ποσό για υπερωρίες ή υπερεργασία, αν δεν υπάρχει βάλε 0.0.")
-    Δώρο_Πάσχα: float = Field(description="Ποσό για Δώρο Πάσχα, αν δεν υπάρχει βάλε 0.0.")
-    Δώρο_Χριστουγέννων: float = Field(description="Ποσό για Δώρο Χριστουγέννων, αν δεν υπάρχει βάλε 0.0.")
-    Επίδομα_Άδειας: float = Field(description="Ποσό για Επίδομα Άδειας, αν δεν υπάρχει βάλε 0.0.")
-    Λοιπά_Αποδ: float = Field(description="Λοιπά επιδόματα, bonus ή αναδρομικά, αν δεν υπάρχει βάλε 0.0.")
-    Σύνολο_Αποδ: float = Field(description="Οι συνολικές μικτές αποδοχές (άθροισμα όλων των επιμέρους αποδοχών).")
-    ΟΠΣΚΕ: float = Field(description="Αιτούμενο ποσό ΟΠΣΚΕ. Αν δεν προκύπτει αυτόματα, βάλε 0.0.")
+    Τακτικές: FinancialGroup
+    Δώρο_Πάσχα: FinancialGroup
+    Δώρο_Χριστουγέννων: FinancialGroup
+    Επίδομα_Άδειας: FinancialGroup
+    Λοιπά: FinancialGroup
 
 def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     """Συνάρτηση AI OCR που αναλύει το έγγραφο μέσω του Gemini API και επιστρέφει δομημένο JSON"""
@@ -67,9 +67,12 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
             mime_type=mime_type,
         )
 
-        prompt = f"""
-        Είσαι ένας σχολαστικός Έλληνας λογιστής και ορκωτός ελεγκτής μισθοδοσίας. 
-        Σου δίνεται ένα έγγραφο μισθοδοσίας. 
+        pprompt = f"""
+        Είσαι λογιστής. Ανάλυσε το έγγραφο και εξήγαγε τα ποσά ανά τύπο αποδοχών.
+        Κάθε τύπος (π.χ. Τακτικές, Δώρο Πάσχα) έχει δικά του ΙΚΑ, ΦΜΥ, Καθαρές.
+        Αν ένα ποσό (π.χ. Δώρο Πάσχα) δεν υπάρχει στη σελίδα, βάλε 0.0 στα πεδία του.
+        Μην αθροίζεις τα πάντα στις Τακτικές. Διαχώρισέ τα ανάλογα με το πού αναγράφονται στο έγγραφο.
+        """
 
         Ο Στόχος σου είναι να εντοπίσεις και να εξάγεις τα οικονομικά στοιχεία ΑΠΟΚΛΕΙΣΤΙΚΑ ΚΑΙ ΜΟΝΟ για τον εξής υπάλληλο:
         👉 ΥΠΑΛΛΗΛΟΣ ΠΡΟΣ ΕΛΕΓΧΟ: "{emp_name}"
@@ -95,30 +98,15 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     except Exception as e:
         st.error(f"❌ Σφάλμα κατά την επεξεργασία AI OCR: {e}")
         return {}
-def render_financial_fields(tab_prefix, current_values, fields_to_show=None):
-    """
-    Εμφανίζει ΜΟΝΟ τα πεδία που ορίζουμε στη λίστα fields_to_show.
-    """
-    # 1. Αρχικοποίηση του λεξικού εδώ
+def render_financial_fields(tab_prefix, group_data):
+    # group_data είναι ένα instance του FinancialGroup (π.χ. ocr_results.Τακτικές)
+    cols = st.columns(3)
+    data = group_data.dict() if hasattr(group_data, 'dict') else group_data
+    
     financials = {}
-    
-    if fields_to_show is None:
-        fields_to_show = ["ΙΚΑ_Εργ", "ΙΚΑ_Εργοδ", "ΤΕΚΑ_Εργ", "ΦΜΥ", "Καθαρές", "ΟΠΣΚΕ"]
-    
-    # 2. Δημιουργία στηλών για το UI
-    cols = st.columns(2)
-    
-    # 3. Εμφάνιση των πεδίων δυναμικά
-    for i, field in enumerate(fields_to_show):
-        with cols[i % 2]:
-            financials[field] = st.number_input(
-                field.replace("_", " "), 
-                value=float(current_values.get(field, 0.0)), 
-                format="%.2f", 
-                key=f"{tab_prefix}_{field}"
-            )
-            
-    # 4. Επιστροφή των τιμών ώστε να ενημερωθεί το session_state
+    for i, (key, value) in enumerate(data.items()):
+        with cols[i % 3]:
+            financials[key] = st.number_input(key.replace("_", " "), value=float(value), key=f"{tab_prefix}_{key}")
     return financials
     
     # Χρησιμοποιούμε το current_values που ήρθε από το OCR ή το CSV
@@ -210,20 +198,36 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
 
     # --- TAB 1: Δώρο Πάσχα ---
+    
     with tabs[1]:
-        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=float(get_val("Δώρο_Πάσχα")), format="%.2f", key=f"{fin_key}_doro_p")
-        # Εδώ μπορείς να δείξεις μόνο τα απαραίτητα πεδία ή τίποτα άλλο
-        st.session_state["financial_data"]["Δώρο_Πάσχα"] = v_doro_pasxa
-
+        # Αν υπάρχει OCR data, πάρε μόνο το κομμάτι του Δώρου
+        group_data = st.session_state["ocr_results"].Δώρο_Πάσχα if "ocr_results" in st.session_state else FinancialGroup()
+        # Εμφάνιση πεδίων μόνο για το Δώρο
+        tab_financials = render_financial_fields(f"{fin_key}_pasxa", group_data)
+        # Αποθήκευση στο σωστό σημείο
+        st.session_state["financial_data"]["Δώρο_Πάσχα"] = tab_financials
     # --- TAB 2: Δώρο Χριστουγέννων ---
+    
     with tabs[2]:
-        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=float(get_val("Δώρο_Χριστουγέννων")), format="%.2f", key=f"{fin_key}_doro_x")
-        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = v_doro_xrist
-
+        # Αν υπάρχει OCR data, πάρε μόνο το κομμάτι του Δώρου
+        group_data = st.session_state["ocr_results"].Δώρο_Χριστουγέννων if "ocr_results" in st.session_state else FinancialGroup()
+        
+        # Εμφάνιση πεδίων μόνο για το Δώρο
+        tab_financials = render_financial_fields(f"{fin_key}_xrist", group_data)
+        
+        # Αποθήκευση στο σωστό σημείο
+        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = tab_financials
     # --- TAB 3: Επίδομα αδείας ---
     with tabs[3]:
-        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=float(get_val("Επίδομα_Άδειας")), format="%.2f", key=f"{fin_key}_epidoma_a")
-        st.session_state["financial_data"]["Επίδομα_Άδειας"] = v_epidoma_ad
+        # Αν υπάρχει OCR data, πάρε μόνο το κομμάτι του Δώρου
+        group_data = st.session_state["ocr_results"].Επίδομα_Άδειας if "ocr_results" in st.session_state else FinancialGroup()
+        
+        # Εμφάνιση πεδίων μόνο για το Δώρο
+        tab_financials = render_financial_fields(f"{fin_key}_epidoma_ad", group_data)
+        
+        # Αποθήκευση στο σωστό σημείο
+        st.session_state["financial_data"]["Επίδομα_Άδειας"] = tab_financials
+    
         
     # Κουμπί αποθήκευσης
     if st.button("💾 Αποθήκευση Όλων"):
