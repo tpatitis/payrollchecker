@@ -83,7 +83,7 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         """
 
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-2.0-flash',
             contents=[file_part, prompt],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -182,37 +182,43 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         "Επίδομα_Άδειας": 0.0
     }
 
+    # 1. Πάρε τα δεδομένα από το OCR αν υπάρχουν, αλλιώς από το CSV ή 0.0
+    ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
+    
+    # Φτιάξε ένα λεξικό με τις τιμές που θα εμφανιστούν
+    def get_val(key_name):
+        if key_name in ocr_data: return ocr_data[key_name]
+        return default_values.get(key_name, 0.0)
+
+    # 2. Tabs με σωστή ανάθεση τιμών
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
     # Για κάθε tab, φορτώνουμε τα τρέχοντα values και τα εμφανίζουμε
     with tabs[0]:
-        current_values = st.session_state["financial_data"]
-        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=current_values["Τακτικές_Αποδ"], format="%.2f", key="tab_0_main")
-        financials = render_financial_fields("tab0", current_values)
+        v_tak_ap = st.number_input("Βασικός Μισθός (€)", value=get_val("Τακτικές_Αποδ"), format="%.2f", key="tab0_tak")
+        # Πέρασε το ocr_data στη συνάρτηση για να ξέρει τι να δείξει
+        financials = render_financial_fields("tab0", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Τακτικές_Αποδ"] = v_tak_ap
-
+        
     with tabs[1]:
-        current_values = st.session_state["financial_data"]
-        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=current_values["Δώρο_Πάσχα"], format="%.2f", key="tab_1_main")
-        financials = render_financial_fields("tab1", current_values)
+        v_doro_pasxa = st.number_input("Ποσό Δώρου Πάσχα (€)", value=get_val("Δώρο_Πάσχα"), format="%.2f", key="tab1_pasxa")
+        financials = render_financial_fields("tab1", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Δώρο_Πάσχα"] = v_doro_pasxa
-
+        
     with tabs[2]:
-        current_values = st.session_state["financial_data"]
-        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=current_values["Δώρο_Χριστουγέννων"], format="%.2f", key="tab_2_main")
-        financials = render_financial_fields("tab2", current_values)
+        v_doro_xrist = st.number_input("Ποσό Δώρου Χριστουγέννων (€)", value=get_val("Δώρο_Χριστουγέννων"), format="%.2f", key="tab1_pasxa")
+        financials = render_financial_fields("tab1", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = v_doro_xrist
-
+        
     with tabs[3]:
-        current_values = st.session_state["financial_data"]
-        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=current_values["Επίδομα_Άδειας"], format="%.2f", key="tab_3_main")
-        financials = render_financial_fields("tab3", current_values)
+        v_epidoma_ad = st.number_input("Ποσό Επιδόματος Αδείας (€)", value=get_val("Επίδομα_Άδειας"), format="%.2f", key="tab1_pasxa")
+        financials = render_financial_fields("tab1", ocr_data if ocr_data else default_values)
         st.session_state["financial_data"].update(financials)
         st.session_state["financial_data"]["Επίδομα_Άδειας"] = v_epidoma_ad
-
+        
     # Κουμπί αποθήκευσης
     if st.button("💾 Αποθήκευση Όλων"):
         # ΑΦΑΙΡΕΣΕ ΤΟΝ ΕΠΑΝΑΟΡΙΣΜΟ ΤΩΝ ΣΥΝΑΡΤΗΣΕΩΝ ΕΔΩ
