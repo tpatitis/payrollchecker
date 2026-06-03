@@ -35,7 +35,6 @@ def save_to_csv(df, filename):
 
 # --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (STRUCTURED OUTPUT SCHEMA) ---
 class FinancialGroup(BaseModel):
-    Τακτικές_Αποδοχές: float = 0.0 # Προσθήκη για να υπάρχει στο tab 0
     ΙΚΑ_Εργαζομένου: float = 0.0
     ΙΚΑ_Εργοδότη: float = 0.0
     ΤΕΚΑ_Εργαζομένου: float = 0.0
@@ -143,7 +142,7 @@ def render_financial_fields(tab_prefix, group_data, fields_to_show=None):
         "ΤΕΚΑ_Εργαζομένου": teka_erg,
         "ΤΕΚΑ_Εργοδότη": teka_ergod,
         "ΦΜΥ": fmy,
-        "Καθαρές_αποδοχές": kathares,
+        "Καθαρέ_αποδοχέςς": kathares,
         "Επιδοτούμενο_ΟΠΣΚΕ": opsk
     }
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
@@ -178,13 +177,10 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     # Αν υπάρχει OCR data, το περνάμε ως default
     trigger_key = f"ocr_data_{fin_key}"
     if trigger_key in st.session_state:
-        st.write("DEBUG: Τι έλαβε το AI:")
-        st.json(st.session_state[trigger_key])
-        
-        # Ενημέρωσε το τοπικό ocr_data για να το χρησιμοποιήσεις στα tabs
         ocr_data = st.session_state[trigger_key]
-    else:
-        ocr_data = {}
+        for k in default_values:
+            if k in ocr_data:
+                default_values[k] = ocr_data[k]
 
     # Εμφάνιση default values για debugging
     st.write("Default Values loaded:", default_values)
@@ -211,32 +207,38 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
     # --- TAB 0: Τακτικές αποδοχές ---
-    ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
-    
-    # --- TAB 0 ---
     with tabs[0]:
-        # Πάρε το sub-dictionary "Τακτικές"
-        group_data = ocr_data.get("Τακτικές", {}) 
-        tak_data = render_financial_fields(f"{fin_key}_tab0", group_data)
+               
+        group_data = st.session_state.get("ocr_results", {}).get("Τακτικές_Αποδοχές", FinancialGroup())
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+        tak_data = render_financial_fields(f"{fin_key}_tak", group_data)
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
         st.session_state["financial_data"]["Τακτικές"] = tak_data
-        
-    # --- TAB 1 (Πάσχα) ---
+    # --- TAB 1: Δώρο Πάσχα ---
+    
     with tabs[1]:
-        group_data = ocr_data.get("Δώρο_Πάσχα", {})
+        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Πάσχα", FinancialGroup())
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
         doro_pasxa_data = render_financial_fields(f"{fin_key}_pasxa", group_data)
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
         st.session_state["financial_data"]["Δώρο_Πάσχα"] = doro_pasxa_data
    
     # --- TAB 2: Δώρο Χριστουγέννων ---
     with tabs[2]:
-        group_data = ocr_data.get("Δώρο_Χριστουγέννων", {})
+        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Χριστουγέννων", FinancialGroup())
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
         doro_xrist_data = render_financial_fields(f"{fin_key}_xrist", group_data)
-        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = doro_xrist_data   
-    
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
+        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = doro_xrist_data
+       
     # --- TAB 3: Επίδομα αδείας ---
     with tabs[3]:
-        group_data = ocr_data.get("Επίδομα_Άδειας", {})
+        group_data = st.session_state.get("ocr_results", {}).get("Επίδομα_Άδειας", FinancialGroup())
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
         epidom_data = render_financial_fields(f"{fin_key}_epidom", group_data)
-        st.session_state["financial_data"]["Επίδομα_Άδειας"] = epidom_data   
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
+        st.session_state["financial_data"]["Επίδομα_Άδειας"] = epidom_data
+    
         
     if st.button("💾 Αποθήκευση Όλων"):
         # Δημιουργία flat dictionary για το CSV
@@ -469,4 +471,4 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
 
                 render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_project_afm)
             else:
-                st.warning("⚠️ Τα δεδομένα των υπαλλήλων δεν είναι έγκυρα.")  
+                st.warning("⚠️ Τα δεδομένα των υπαλλήλων δεν είναι έγκυρα.")
