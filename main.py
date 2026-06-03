@@ -236,7 +236,32 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
             
             # Αποθήκευση
             st.session_state["financial_data"][key_in_json] = data_captured
-    
+            # 3. Κουμπί Αποθήκευσης
+    if st.button("💾 Αποθήκευση Όλων"):
+        # Δημιουργία flat dictionary για το CSV
+        flat_data = {"ID_Κλειδί": fin_key}
+        
+        # Συλλογή δεδομένων από το session_state
+        for group_name, group_dict in st.session_state["financial_data"].items():
+            if isinstance(group_dict, dict):
+                for field, val in group_dict.items():
+                    flat_data[f"{group_name}_{field}"] = val
+            else:
+                flat_data[group_name] = group_dict
+            
+        # Φόρτωση, ενημέρωση και αποθήκευση στο CSV
+        # Χρησιμοποιούμε τη λίστα των κλειδιών για να ορίσουμε τις στήλες
+        fin_df = load_data(FINANCIALS_FILE, list(flat_data.keys()))
+        
+        # Αφαιρούμε παλιά εγγραφή για το ίδιο ID αν υπάρχει
+        fin_df = fin_df[fin_df['ID_Κλειδί'] != fin_key]
+        
+        # Προσθήκη νέας γραμμής
+        new_row = pd.DataFrame([flat_data])
+        fin_df = pd.concat([fin_df, new_row], ignore_index=True)
+        
+        save_to_csv(fin_df, FINANCIALS_FILE)
+        st.success("✅ Τα στοιχεία αποθηκεύτηκαν επιτυχώς στο CSV!")
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 st.sidebar.title("📑 Μενού Διαχείρισης")
 page = st.sidebar.radio(
