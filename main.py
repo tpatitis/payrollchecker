@@ -66,8 +66,6 @@ def save_to_csv(df, filename):
 
 class FinancialGroup(BaseModel):
 
-    Τακτικές_Αποδοχές: float = 0.0 # Προσθήκη για να υπάρχει στο tab 0
-
     ΙΚΑ_Εργαζομένου: float = 0.0
 
     ΙΚΑ_Εργοδότη: float = 0.0
@@ -95,7 +93,7 @@ class PayrollFinancials(BaseModel):
 
     Επίδομα_Άδειας: FinancialGroup
 
-     
+    Λοιπά: FinancialGroup
 
 
 def extract_financials_with_ai_stage3(uploaded_file, emp_name):
@@ -274,7 +272,7 @@ def render_financial_fields(tab_prefix, group_data, fields_to_show=None):
 
         "ΦΜΥ": fmy,
 
-        "Καθαρές_αποδοχές": kathares,
+        "Καθαρέ_αποδοχέςς": kathares,
 
         "Επιδοτούμενο_ΟΠΣΚΕ": opsk
 
@@ -310,36 +308,13 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # Φόρτωση δεδομένων
 
-    # Φόρτωση δεδομένων
-
-    fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργαζομένου", "ΙΚΑ_Εργοδότη", "ΤΕΚΑ_Εργαζομένου", "ΤΕΚΑ_Εργοδότη", 
-
-                "Σύνολο_Εισφορών", "ΦΜΥ", "Καθαρές_αποδοχές", "Τακτικές_Αποδ", "Υπερωρίες", 
-
-                "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
+    fin_cols = ["ID_Κλειδί", "ΙΚΑ_Εργαζομένου", "ΙΚΑ_Εργοδότη", "ΤΕΚΑ_Εργαζομένου", "ΤΕΚΑ_Εργοδότη", "Σύνολο_Εισφορών", "ΦΜΥ", "Καθαρές_αποδοχές", "Τακτικές_Αποδ", "Υπερωρίες", "Δώρο_Πάσχα", "Δώρο_Χριστουγέννων", "Επίδομα_Άδειας", "Λοιπά_Αποδ", "Σύνολο_Αποδ", "ΟΠΣΚΕ"]
 
     
+
+    # Χρήση της global FINANCIALS_FILE που ορίστηκε στην αρχή του αρχείου
 
     fin_df = load_data(FINANCIALS_FILE, fin_cols)
-
-
-    # --- ΕΔΩ ΕΙΝΑΙ Η ΔΙΟΡΘΩΣΗ ---
-
-    # Αν το DataFrame είναι άδειο, βεβαιώσου ότι έχει τις στήλες
-
-    if fin_df.empty:
-
-        fin_df = pd.DataFrame(columns=fin_cols)
-
-    
-
-    # Επιπλέον έλεγχος: Αν λείπει η στήλη από ένα υπάρχον αρχείο, πρόσθεσέ την
-
-    if 'ID_Κλειδί' not in fin_df.columns:
-
-        fin_df['ID_Κλειδί'] = "" 
-
-    # ----------------------------
 
 
     # Διασφάλιση ότι όλες οι στήλες υπάρχουν
@@ -365,19 +340,13 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     if trigger_key in st.session_state:
 
-        st.write("DEBUG: Τι έλαβε το AI:")
-
-        st.json(st.session_state[trigger_key])
-
-        
-
-        # Ενημέρωσε το τοπικό ocr_data για να το χρησιμοποιήσεις στα tabs
-
         ocr_data = st.session_state[trigger_key]
 
-    else:
+        for k in default_values:
 
-        ocr_data = {}
+            if k in ocr_data:
+
+                default_values[k] = ocr_data[k]
 
 
     # Εμφάνιση default values για debugging
@@ -426,56 +395,71 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # --- TAB 0: Τακτικές αποδοχές ---
 
-    ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
+    with tabs[0]:
+
+               
+
+        group_data = st.session_state.get("ocr_results", {}).get("Τακτικές_Αποδοχές", FinancialGroup())
+
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+
+        tak_data = render_financial_fields(f"{fin_key}_tak", group_data)
+
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
+
+        st.session_state["financial_data"]["Τακτικές"] = tak_data
+
+    # --- TAB 1: Δώρο Πάσχα ---
 
     
 
-    # Δημιουργία χαρτογράφησης μεταξύ Tab και κλειδιού στο JSON
+    with tabs[1]:
 
-    tab_mapping = {
+        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Πάσχα", FinancialGroup())
 
-        0: "Τακτικές",
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
 
-        1: "Δώρο_Πάσχα",
+        doro_pasxa_data = render_financial_fields(f"{fin_key}_pasxa", group_data)
 
-        2: "Δώρο_Χριστουγέννων",
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
 
-        3: "Επίδομα_Άδειας"
+        st.session_state["financial_data"]["Δώρο_Πάσχα"] = doro_pasxa_data
 
-    }
+   
 
+    # --- TAB 2: Δώρο Χριστουγέννων ---
 
-    for i, tab in enumerate(tabs):
+    with tabs[2]:
 
-        with tab:
+        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Χριστουγέννων", FinancialGroup())
 
-            key_in_json = tab_mapping[i]
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
 
-            # ΕΔΩ ΕΙΝΑΙ ΤΟ ΚΛΕΙΔΙ: Εξάγουμε το dictionary αν υπάρχει, αλλιώς άδειο dict
+        doro_xrist_data = render_financial_fields(f"{fin_key}_xrist", group_data)
 
-            group_data = ocr_data.get(key_in_json, {})
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
 
-            
+        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = doro_xrist_data
 
-            # Αν το group_data είναι Pydantic model (από το API), μετατροπή σε dict
+       
 
-            if hasattr(group_data, 'model_dump'):
+    # --- TAB 3: Επίδομα αδείας ---
 
-                group_data = group_data.model_dump()
+    with tabs[3]:
 
-            
+        group_data = st.session_state.get("ocr_results", {}).get("Επίδομα_Άδειας", FinancialGroup())
 
-            # Εμφάνιση πεδίων
+        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
 
-            data_captured = render_financial_fields(f"{fin_key}_{key_in_json}", group_data)
+        epidom_data = render_financial_fields(f"{fin_key}_epidom", group_data)
 
-            
+        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
 
-            # Αποθήκευση
+        st.session_state["financial_data"]["Επίδομα_Άδειας"] = epidom_data
 
-            st.session_state["financial_data"][key_in_json] = data_captured
+    
 
-            # 3. Κουμπί Αποθήκευσης
+        
 
     if st.button("💾 Αποθήκευση Όλων"):
 
@@ -483,9 +467,9 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
         flat_data = {"ID_Κλειδί": fin_key}
 
-        
+    
 
-        # Συλλογή δεδομένων από το session_state
+        # Προσθήκη όλων των επιμέρους στοιχείων (π.χ. Δώρο_Πάσχα_ΙΚΑ_Εργ)
 
         for group_name, group_dict in st.session_state["financial_data"].items():
 
@@ -501,11 +485,9 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
             
 
-        # Φόρτωση, ενημέρωση και αποθήκευση στο CSV
+        # 3. Φόρτωση, ενημέρωση και αποθήκευση στο CSV
 
-        # Χρησιμοποιούμε τη λίστα των κλειδιών για να ορίσουμε τις στήλες
-
-        fin_df = load_data(FINANCIALS_FILE, list(flat_data.keys()))
+        fin_df = load_data(FINANCIALS_FILE, list(flat_row.keys()))
 
         
 
@@ -517,7 +499,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
         # Προσθήκη νέας γραμμής
 
-        new_row = pd.DataFrame([flat_data])
+        new_row = pd.DataFrame([flat_row])
 
         fin_df = pd.concat([fin_df, new_row], ignore_index=True)
 
@@ -526,6 +508,8 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
         save_to_csv(fin_df, FINANCIALS_FILE)
 
         st.success("✅ Τα στοιχεία αποθηκεύτηκαν επιτυχώς στο CSV!")
+
+    
 
 # --- 5. ΠΛΕΥΡΙΚΟ ΜΕΝΟΥ ---
 
