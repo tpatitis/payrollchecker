@@ -83,7 +83,7 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
         """
 
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.5-flash',
             contents=[file_part, prompt],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
