@@ -469,4 +469,4 @@ elif page == "3. Μισθοδοσία Υπαλλήλων":
 
                 render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_project_afm)
             else:
-                st.warning("⚠️ Τα δεδομένα των υπαλλήλων δεν είναι έγκυρα.")  δεν φαινονται τα στοιχεια, ενω στο debug φαινονται
+                st.warning("⚠️ Τα δεδομένα των υπαλλήλων δεν είναι έγκυρα.")  
