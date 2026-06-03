@@ -211,41 +211,32 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     tabs = st.tabs(["Τακτικές αποδοχές", "Δώρο Πάσχα", "Δώρο Χριστουγέννων", "Επίδομα αδείας"])
 
     # --- TAB 0: Τακτικές αποδοχές ---
-    with tabs[0]:
-        # Παίρνουμε την ομάδα "Τακτικές" από το OCR
-        ocr_results = st.session_state.get(f"ocr_data_{fin_key}", {})
-        group_data = ocr_results.get("Τακτικές", FinancialGroup())
-        
-        # Εμφάνιση πεδίων με την ίδια συνάρτηση
-        tak_data = render_financial_fields(f"{fin_key}_tab0", group_data)
-        
-        # Αποθήκευση
-        st.session_state["financial_data"]["Τακτικές"] = tak_data
-    # --- TAB 1: Δώρο Πάσχα ---
+    ocr_data = st.session_state.get(f"ocr_data_{fin_key}", {})
     
+    # --- TAB 0 ---
+    with tabs[0]:
+        # Πάρε το sub-dictionary "Τακτικές"
+        group_data = ocr_data.get("Τακτικές", {}) 
+        tak_data = render_financial_fields(f"{fin_key}_tab0", group_data)
+        st.session_state["financial_data"]["Τακτικές"] = tak_data
+        
+    # --- TAB 1 (Πάσχα) ---
     with tabs[1]:
-        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Πάσχα", FinancialGroup())
-        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+        group_data = ocr_data.get("Δώρο_Πάσχα", {})
         doro_pasxa_data = render_financial_fields(f"{fin_key}_pasxa", group_data)
-        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
         st.session_state["financial_data"]["Δώρο_Πάσχα"] = doro_pasxa_data
    
     # --- TAB 2: Δώρο Χριστουγέννων ---
     with tabs[2]:
-        group_data = st.session_state.get("ocr_results", {}).get("Δώρο_Χριστουγέννων", FinancialGroup())
-        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+        group_data = ocr_data.get("Δώρο_Χριστουγέννων", {})
         doro_xrist_data = render_financial_fields(f"{fin_key}_xrist", group_data)
-        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
-        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = doro_xrist_data
-       
+        st.session_state["financial_data"]["Δώρο_Χριστουγέννων"] = doro_xrist_data   
+    
     # --- TAB 3: Επίδομα αδείας ---
     with tabs[3]:
-        group_data = st.session_state.get("ocr_results", {}).get("Επίδομα_Άδειας", FinancialGroup())
-        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
+        group_data = ocr_data.get("Επίδομα_Άδειας", {})
         epidom_data = render_financial_fields(f"{fin_key}_epidom", group_data)
-        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
-        st.session_state["financial_data"]["Επίδομα_Άδειας"] = epidom_data
-    
+        st.session_state["financial_data"]["Επίδομα_Άδειας"] = epidom_data   
         
     if st.button("💾 Αποθήκευση Όλων"):
         # Δημιουργία flat dictionary για το CSV
