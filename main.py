@@ -2,6 +2,8 @@ import base64
 import json
 import streamlit as st
 from openai import OpenAI
+import pandas as pd
+from pydantic import BaseModel
 
 # --- 1. ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ ---
 st.set_page_config(
