@@ -35,6 +35,8 @@ def save_to_csv(df, filename):
 
 # --- 4. ΣΤΑΔΙΟ 3: ΜΙΣΘΟΔΟΣΙΑ ΥΠΑΛΛΗΛΩΝ (STRUCTURED OUTPUT SCHEMA) ---
 class FinancialGroup(BaseModel):
+    Τακτικές_Αποδοχές: float = 0.0 # Πρόσθεσέ το εδώ
+    ΙΚΑ_Εργαζομένου: float = 0.0
     ΙΚΑ_Εργαζομένου: float = 0.0
     ΙΚΑ_Εργοδότη: float = 0.0
     ΤΕΚΑ_Εργαζομένου: float = 0.0
@@ -208,11 +210,14 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
 
     # --- TAB 0: Τακτικές αποδοχές ---
     with tabs[0]:
-               
-        group_data = st.session_state.get("ocr_results", {}).get("Τακτικές_Αποδοχές", FinancialGroup())
-        # Εμφάνιση πεδίων και λήψη αποτελεσμάτων
-        tak_data = render_financial_fields(f"{fin_key}_tak", group_data)
-        # Αποθήκευση στο state ως ξεχωριστό αντικείμενο
+        # Παίρνουμε την ομάδα "Τακτικές" από το OCR
+        ocr_results = st.session_state.get(f"ocr_data_{fin_key}", {})
+        group_data = ocr_results.get("Τακτικές", FinancialGroup())
+        
+        # Εμφάνιση πεδίων με την ίδια συνάρτηση
+        tak_data = render_financial_fields(f"{fin_key}_tab0", group_data)
+        
+        # Αποθήκευση
         st.session_state["financial_data"]["Τακτικές"] = tak_data
     # --- TAB 1: Δώρο Πάσχα ---
     
