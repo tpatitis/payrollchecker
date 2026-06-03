@@ -73,7 +73,16 @@ def extract_financials_with_ai_stage3(uploaded_file, emp_name):
     try:
         response = client.chat.completions.create(
             model="llama-3.2-90b-vision-preview",
-            messages=[...],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Ανάλυσε το επισυναπτόμενο έγγραφο."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                    ]
+                }
+            ],
             response_format={"type": "json_object"}
         )
         
@@ -146,6 +155,7 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     uploaded_file = st.file_uploader("Ανέβασε αρχείο (PDF/Image)", type=['pdf', 'png', 'jpg'], key=f"upload_{fin_key}")
     
     if uploaded_file and st.button("🚀 Ανάλυση με AI"):
+        st.write("Το κουμπί πατήθηκε και το αρχείο βρέθηκε!") # Debug message
         with st.spinner("Αναλύω..."):
             ocr_results = extract_financials_with_ai_stage3(uploaded_file, emp_data["Ονοματεπώνυμο"])
         
@@ -191,8 +201,8 @@ def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, sel
     if st.button("💾 Αποθήκευση Όλων"):
         flat_data = {"ID_Κλειδί": fin_key}
         
-        # Εδώ τραβάμε τα δεδομένα από το session state του συγκεκριμένου υπαλλήλου
-        current_data = st.session_state.get(f"data_{fin_key}", {})
+        # Εδώ πρέπει να τραβήξεις από το σωστό κλειδί που αποθήκευσε το OCR
+        current_data = st.session_state.get(f"ocr_data_{fin_key}", {})
         
         for group_name, group_dict in current_data.items():
             if isinstance(group_dict, dict):
