@@ -143,7 +143,7 @@ def render_financial_fields(tab_prefix, group_data, fields_to_show=None):
         "ΤΕΚΑ_Εργαζομένου": teka_erg,
         "ΤΕΚΑ_Εργοδότη": teka_ergod,
         "ΦΜΥ": fmy,
-        "Καθαρέ_αποδοχέςς": kathares,
+        "Καθαρές_αποδοχές": kathares,
         "Επιδοτούμενο_ΟΠΣΚΕ": opsk
     }
 def render_stage_3(fin_key, emp_data, selected_month, selected_year, period, selected_afm):
